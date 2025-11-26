@@ -87,7 +87,6 @@ body {
 /* Main Content */
 .main {
     min-height: calc(100vh - 140px - 60px); /* header 140px, footer 60px */
-    padding: 2rem 0;
 }
 
 .main-content {
@@ -522,8 +521,6 @@ body {
     font-weight: 600;
     color: #1e293b;
     margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid #e2e8f0;
 }
 
 .step3-test-list {

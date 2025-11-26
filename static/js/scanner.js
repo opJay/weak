@@ -1344,70 +1344,7 @@ function displaySummary(data) {
  * Display security results
  */
 function displaySecurityResults(securityData) {
-    // Create chart
-    const ctx = document.getElementById('securityChart').getContext('2d');
-
-    if (charts.security) {
-        charts.security.destroy();
-    }
-
-    charts.security = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['점수', '남은 점수'],
-            datasets: [{
-                data: [securityData.overall_score, 100 - securityData.overall_score],
-                backgroundColor: [
-                    getRiskColor(securityData.risk_level),
-                    '#e5e7eb'
-                ],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    enabled: false
-                }
-            },
-            cutout: '75%'
-        },
-        plugins: [{
-            id: 'centerText',
-            beforeDraw: function(chart) {
-                const width = chart.width;
-                const height = chart.height;
-                const ctx = chart.ctx;
-                ctx.restore();
-
-                const fontSize = (height / 114).toFixed(2);
-                ctx.font = `bold ${fontSize}em sans-serif`;
-                ctx.textBaseline = 'middle';
-
-                const text = `${securityData.overall_score}`;
-                const textX = Math.round((width - ctx.measureText(text).width) / 2);
-                const textY = height / 2;
-
-                ctx.fillStyle = '#0f172a';
-                ctx.fillText(text, textX, textY);
-
-                ctx.font = `${fontSize * 0.4}em sans-serif`;
-                const subText = securityData.risk_level.toUpperCase();
-                const subTextX = Math.round((width - ctx.measureText(subText).width) / 2);
-                const subTextY = height / 2 + 25;
-
-                ctx.fillStyle = getRiskColor(securityData.risk_level);
-                ctx.fillText(subText, subTextX, subTextY);
-
-                ctx.save();
-            }
-        }]
-    });
+    // Chart.js removed - display security details only
 
     // Display security headers
     const detailsSection = document.getElementById('securityDetails');
@@ -1446,62 +1383,7 @@ function displaySecurityResults(securityData) {
  * Display standards results
  */
 function displayStandardsResults(standardsData) {
-    // Create chart
-    const ctx = document.getElementById('standardsChart').getContext('2d');
-
-    if (charts.standards) {
-        charts.standards.destroy();
-    }
-
-    charts.standards = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['점수', '남은 점수'],
-            datasets: [{
-                data: [standardsData.overall_score, 100 - standardsData.overall_score],
-                backgroundColor: [
-                    getScoreColor(standardsData.overall_score),
-                    '#e5e7eb'
-                ],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    enabled: false
-                }
-            },
-            cutout: '75%'
-        },
-        plugins: [{
-            id: 'centerText',
-            beforeDraw: function(chart) {
-                const width = chart.width;
-                const height = chart.height;
-                const ctx = chart.ctx;
-                ctx.restore();
-
-                const fontSize = (height / 114).toFixed(2);
-                ctx.font = `bold ${fontSize}em sans-serif`;
-                ctx.textBaseline = 'middle';
-
-                const text = `${standardsData.overall_score}`;
-                const textX = Math.round((width - ctx.measureText(text).width) / 2);
-                const textY = height / 2;
-
-                ctx.fillStyle = '#0f172a';
-                ctx.fillText(text, textX, textY);
-
-                ctx.save();
-            }
-        }]
-    });
+    // Chart.js removed - display standards details only
 
     // Display SEO details
     const detailsSection = document.getElementById('standardsDetails');
@@ -1561,70 +1443,7 @@ function displayStandardsResults(standardsData) {
  * Display accessibility results
  */
 function displayAccessibilityResults(accessibilityData) {
-    // Create chart
-    const ctx = document.getElementById('accessibilityChart').getContext('2d');
-
-    if (charts.accessibility) {
-        charts.accessibility.destroy();
-    }
-
-    charts.accessibility = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['점수', '남은 점수'],
-            datasets: [{
-                data: [accessibilityData.overall_score, 100 - accessibilityData.overall_score],
-                backgroundColor: [
-                    getScoreColor(accessibilityData.overall_score),
-                    '#e5e7eb'
-                ],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    enabled: false
-                }
-            },
-            cutout: '75%'
-        },
-        plugins: [{
-            id: 'centerText',
-            beforeDraw: function(chart) {
-                const width = chart.width;
-                const height = chart.height;
-                const ctx = chart.ctx;
-                ctx.restore();
-
-                const fontSize = (height / 114).toFixed(2);
-                ctx.font = `bold ${fontSize}em sans-serif`;
-                ctx.textBaseline = 'middle';
-
-                const text = `${accessibilityData.overall_score}`;
-                const textX = Math.round((width - ctx.measureText(text).width) / 2);
-                const textY = height / 2;
-
-                ctx.fillStyle = '#0f172a';
-                ctx.fillText(text, textX, textY);
-
-                ctx.font = `${fontSize * 0.4}em sans-serif`;
-                const subText = `WCAG ${accessibilityData.wcag_level}`;
-                const subTextX = Math.round((width - ctx.measureText(subText).width) / 2);
-                const subTextY = height / 2 + 25;
-
-                ctx.fillStyle = '#64748b';
-                ctx.fillText(subText, subTextX, subTextY);
-
-                ctx.save();
-            }
-        }]
-    });
+    // Chart.js removed - display accessibility details only
 
     // Display accessibility details
     const detailsSection = document.getElementById('accessibilityDetails');
