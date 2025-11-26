@@ -41,3 +41,17 @@ Thumbs.db
 
 # uv
 .python-version
+
+# Claude AI
+.claude/
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Backup files
+*.backup
+*.bak
+
+# Windows specific
+nul

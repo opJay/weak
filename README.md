@@ -162,11 +162,15 @@ URL을 입력하면 웹 취약점을 자동으로 분석해주는 싱글페이�
 - 색상 대비 검사
 
 ### 🎯 추가 기능
-- 실시간 스캔 진행률 표시
-- Chart.js를 이용한 시각화
-- 취약점 상세 리포트
+- 실시간 스캔 진행률 표시 (WebSocket)
+- Chart.js를 이용한 시각화 (도넛 차트)
+- **✨ 확장 가능한 상세 결과 표시**
+  - 모든 테스트 항목에 대한 상세 정보
+  - 통과한 테스트도 검증 내용 표시
+  - 실패한 테스트의 해결 방법 제공
+- 3단계 위저드 인터페이스 (입력 → 진행 → 결과)
 - REST API 제공
-- 비동기 스캔 처리 (Celery)
+- 비동기 스캔 처리 (Celery + Redis)
 
 ## 기술 스택
 
@@ -313,31 +317,42 @@ API 문서는 http://localhost:8000/api/docs/ 에서 확인할 수 있습니다.
 ```
 weak/
 ├── config/              # Django 설정
-│   ├── settings.py
+│   ├── settings.py     # 메인 설정
 │   ├── celery.py       # Celery 설정
-│   └── urls.py
+│   └── urls.py         # URL 라우팅
 ├── scanner/            # 메인 스캐너 앱
 │   ├── models.py       # 데이터 모델
 │   ├── tasks.py        # Celery 비동기 작업
-│   ├── scanners.py     # 취약점 스캐너 (NEW!)
+│   ├── scanners.py     # 취약점 스캐너 (통합)
+│   ├── security_scan_refactored.py  # 리팩토링된 보안 스캐너
+│   ├── standards_checker.py  # 웹 표준 검증
+│   ├── progress_manager.py  # 진행률 관리
 │   └── admin.py        # 관리자 페이지
 ├── api/                # REST API
 │   ├── views.py        # API 엔드포인트
 │   ├── serializers.py  # JSON 변환
-│   └── urls.py
+│   └── urls.py         # API 라우팅
+├── core/               # 코어 유틸리티
+│   ├── middleware.py   # 커스텀 미들웨어
+│   └── views.py        # 기본 뷰
+├── reports/            # 리포트 생성 (선택)
 ├── templates/          # HTML 템플릿
 │   └── scanner/
-│       └── index.html  # 메인 페이지
+│       └── index.html  # 메인 페이지 (3단계 위저드)
 ├── static/             # 정적 파일
 │   ├── css/
-│   │   ├── base.css
-│   │   └── scanner.css
+│   │   ├── base.css    # 전역 스타일
+│   │   ├── scanner.css # 스캐너 스타일 (상세 결과 표시)
+│   │   └── wizard.css  # 3단계 위저드 스타일
 │   └── js/
-│       └── scanner.js  # 프론트엔드 로직
-├── main.py            # 프로젝트 관리 CLI (NEW!)
+│       └── scanner.js  # 프론트엔드 로직 (확장된 상세 뷰)
+├── main.py            # 프로젝트 관리 CLI
+├── manage.py          # Django 관리 스크립트
 ├── .env               # 환경 변수
-├── README.md
-└── QUICKSTART.md      # 상세 가이드
+├── .gitignore         # Git 제외 파일
+├── README.md          # 프로젝트 문서
+├── QUICKSTART.md      # 빠른 시작 가이드
+└── CLAUDE.md          # AI 어시스턴트용 가이드
 ```
 
 ## 스캔 예제
@@ -436,6 +451,14 @@ python main.py setup
 
 ## 향후 개발 계획
 
+### 완료된 기능 ✅
+- [x] 실시간 진행률 표시 (WebSocket)
+- [x] 상세 결과 확장 가능한 뷰
+- [x] 3단계 위저드 인터페이스
+- [x] 가중치 기반 진행률 계산
+- [x] 통과/실패 모든 테스트에 대한 상세 정보
+
+### 개발 예정 📋
 - [ ] Playwright/Selenium을 이용한 브라우저 자동화
 - [ ] W3C Validator API 통합
 - [ ] 크롤링 기능 (하위 페이지 스캔)
@@ -444,6 +467,8 @@ python main.py setup
 - [ ] 사용자 인증 및 스캔 히스토리
 - [ ] 스케줄링 (주기적 스캔)
 - [ ] Docker 컨테이너화
+- [ ] 다국어 지원 (영어 추가)
+- [ ] CI/CD 파이프라인 구축
 
 ## 트러블슈팅
 
@@ -508,8 +533,4 @@ python main.py logs -n 100
 ## 연락처
 
 - 이슈: [GitHub Issues](https://github.com/opJay/weak/issues)
-- 이메일: your.email@example.com
-
----
-
-**Made with ❤️ for Security Research**
+- 이메일: issue@weak.kr

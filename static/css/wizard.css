@@ -532,69 +532,7 @@ body {
     gap: 0.5rem;
 }
 
-.step3-test-item {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem;
-    border-radius: 8px;
-    background: #f8fafc;
-    transition: all 0.2s;
-}
-
-.step3-test-item:hover {
-    background: #f1f5f9;
-}
-
-.step3-test-status {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    margin-right: 1rem;
-    font-size: 1.125rem;
-}
-
-.step3-test-name {
-    flex: 1;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #334155;
-}
-
-.step3-test-result {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-}
-
-.step3-test-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.75rem;
-}
-
-.step3-test-badge.pass {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.step3-test-badge.warning {
-    background: #fed7aa;
-    color: #92400e;
-}
-
-.step3-test-badge.fail {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.step3-test-badge.info {
-    background: #dbeafe;
-    color: #1e40af;
-}
+/* Step3 test item styles moved to scanner.css to avoid conflicts */
 
 .step3-test-issues {
     font-size: 0.875rem;
