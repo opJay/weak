@@ -90,6 +90,7 @@ services:
       - DATABASE_URL=postgresql://${DB_USER:-weak_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-weak_db}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - SKIP_MIGRATIONS=true
     depends_on:
       db:
         condition: service_healthy

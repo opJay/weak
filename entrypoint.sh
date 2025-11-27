@@ -42,8 +42,12 @@ if [ -n "$REDIS_URL" ]; then
 fi
 
 # 데이터베이스 마이그레이션 실행
-echo "[3/4] Running database migrations..."
-python manage.py migrate --noinput
+if [ "$SKIP_MIGRATIONS" != "true" ]; then
+    echo "[3/4] Running database migrations..."
+    python manage.py migrate --noinput
+else
+    echo "[3/4] Skipping migrations (handled by web container)"
+fi
 
 # 정적 파일 수집 (프로덕션만)
 if [ "$DEBUG" = "False" ] || [ "$DEBUG" = "false" ]; then
