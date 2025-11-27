@@ -13,8 +13,9 @@ echo "========================================"
 # 로그 디렉토리 권한 설정 (볼륨 마운트 대응)
 echo "[0/4] Setting up log directory..."
 mkdir -p /app/logs
-chown -R weak:weak /app/logs
-chmod -R 755 /app/logs
+# chown은 root 권한이 필요하므로 실패해도 계속 진행
+chown -R weak:weak /app/logs 2>/dev/null || true
+chmod -R 777 /app/logs 2>/dev/null || true
 
 # 데이터베이스 연결 대기
 echo "[1/4] Waiting for database..."
