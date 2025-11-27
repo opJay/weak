@@ -36,7 +36,6 @@ services:
       - "8000:8000"
     volumes:
       - .:/app  # 소스 코드 마운트 (핫 리로드)
-      - ./logs:/app/logs
     depends_on:
       - redis
     networks:
@@ -58,7 +57,6 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
     volumes:
       - .:/app  # 소스 코드 마운트
-      - ./logs:/app/logs
     depends_on:
       - redis
     networks:

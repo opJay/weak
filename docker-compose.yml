@@ -59,7 +59,6 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./logs:/app/logs
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     depends_on:
@@ -91,8 +90,6 @@ services:
       - DATABASE_URL=postgresql://weak_user:${DB_PASSWORD:-changeme}@db:5432/weak_db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
-    volumes:
-      - ./logs:/app/logs
     depends_on:
       db:
         condition: service_healthy
