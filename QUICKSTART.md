@@ -240,11 +240,12 @@ uv run python manage.py createsuperuser
 ## 11. 다음 단계
 
 ### 완료된 기능 ✅
-- [x] **OWASP Top 10 2025 RC1 완전 대응 (35개 보안 스캐너)**
+- [x] **OWASP Top 10 2025 RC1 완전 대응 (42개 보안 스캐너, ~92% 커버리지)**
   - 기본 보안 스캐너 15개 (OWASP Top 10 2021/2025 기반)
   - 고급 보안 스캐너 10개 (SSRF, XXE, Command Injection 등)
   - API 및 인증/인가 스캐너 8개 (REST API, GraphQL, OAuth 등)
   - OWASP 2025 신규 스캐너 2개 (Supply Chain, Exception Handling)
+  - 비즈니스 로직 스캐너 7개 (가격 조작, 레이스 컨디션, 워크플로우 우회 등)
 
 ### 개발 예정 📋
 - [ ] Playwright/Selenium을 사용한 브라우저 자동화

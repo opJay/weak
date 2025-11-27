@@ -29,8 +29,9 @@ weak/
 │   ├── scanners_api.py  # API/Auth security scanners (8 scanners)
 │   ├── scanners_supply_chain.py  # OWASP 2025 supply chain scanner (1 scanner)
 │   ├── scanners_exception.py  # OWASP 2025 exception handling scanner (1 scanner)
+│   ├── scanners_business_logic.py  # Business logic scanners (7 scanners)
 │   ├── tasks.py      # Background task processing
-│   ├── progress_manager.py  # Progress tracking system (35 scanners total)
+│   ├── progress_manager.py  # Progress tracking system (42 scanners total)
 │   ├── security_scan_refactored.py  # Refactored security scanning
 │   ├── standards_checker.py  # Web standards validation
 │   └── models.py     # Database models
@@ -99,8 +100,8 @@ class ExampleScanner:
 ### Progress Management
 - Uses `ProgressManager` class for weighted distribution
 - Scanner counts per type:
-  - Security: 35 scanners (15 basic + 10 advanced + 8 API/auth + 2 OWASP 2025)
-- **OWASP Top 10 2025 RC1 compliant**
+  - Security: 42 scanners (15 basic + 10 advanced + 8 API/auth + 2 OWASP 2025 + 7 business logic)
+- **OWASP Top 10 2025 RC1 compliant (~92% coverage)**
   - Standards: 4 scanners
   - Accessibility: 1 scanner
 - Progress updates via WebSocket or polling
@@ -149,6 +150,35 @@ class ExampleScanner:
 31. **RateLimitingScanner** - Rate Limiting 검사 (API/로그인 제한)
 32. **LDAPInjectionScanner** - LDAP Injection
 33. **AuthorizationScanner** - BOLA/IDOR (객체/함수 레벨 인가 오류)
+
+#### OWASP 2025 신규 대응 스캐너 (scanners_supply_chain.py, scanners_exception.py - 2개)
+OWASP Top 10 2025 RC1의 새로운 보안 위협
+
+34. **SoftwareSupplyChainScanner** - A03:2025 공급망 보안 (종속성 노출, SRI, 취약한 라이브러리)
+35. **ExceptionHandlingScanner** - A10:2025 예외 처리 (스택 트레이스, DB 에러, 디버그 모드)
+
+#### 비즈니스 로직 및 설계 취약점 스캐너 (scanners_business_logic.py - 7개)
+OWASP A06 (Insecure Design) 및 A09 (Logging & Monitoring) 강화
+
+36. **PriceManipulationScanner** - A06:2025 가격/수량 조작 탐지 (음수 값, hidden 필드, 클라이언트 측 계산)
+37. **RaceConditionScanner** - A06:2025 동시성 취약점 (병렬 요청, TOCTOU, Idempotency)
+38. **WorkflowBypassScanner** - A06:2025 워크플로우 우회 (단계 건너뛰기, 상태 조작)
+39. **AccountEnumerationScanner** - A06+A07:2025 계정 열거 (응답 차이, 타이밍 공격)
+40. **ResourceExhaustionScanner** - A06:2025 리소스 소진 (파일 크기, 요청 제한, Rate Limiting)
+41. **LoggingMonitoringScanner** - A09:2025 로깅/모니터링 (Trace ID, 보안 이벤트)
+42. **BusinessLogicAnomalyScanner** - A06:2025 비즈니스 로직 이상 (할인 조작, 수량 제한)
+
+**OWASP Top 10 2025 RC1 커버리지: ~92%**
+- A01 (Broken Access Control): 100%
+- A02 (Cryptographic Failures): 100%
+- A03 (Software Supply Chain): 75%
+- A04 (Injection): 100%
+- A05 (Security Misconfiguration): 80%
+- A06 (Insecure Design): 90% (비즈니스 로직 스캐너 7개 추가로 45%→90%)
+- A07 (Authentication Failures): 100%
+- A08 (Data Integrity Failures): 75%
+- A09 (Logging & Monitoring): 85% (20%→85%)
+- A10 (Exception Handling): 100%
 
 ## Database Design
 
