@@ -35,7 +35,12 @@ DEBUG=False
 SECRET_KEY=<강력한-비밀-키-생성>
 ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
 
-# Database (PostgreSQL)
+# Database
+# IMPORTANT: 아래 값들은 docker-compose.yml에서 자동으로 사용됩니다
+# - PostgreSQL 컨테이너: POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD로 사용
+# - Django/Celery 컨테이너: DATABASE_URL에 자동으로 포함됨
+DB_NAME=weak_db
+DB_USER=weak_user
 DB_PASSWORD=<강력한-데이터베이스-비밀번호>
 
 # Redis

@@ -12,8 +12,8 @@ services:
     image: postgres:16-alpine
     container_name: weak_db
     environment:
-      POSTGRES_DB: weak_db
-      POSTGRES_USER: weak_user
+      POSTGRES_DB: ${DB_NAME:-weak_db}
+      POSTGRES_USER: ${DB_USER:-weak_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -21,7 +21,7 @@ services:
       - weak_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U weak_user -d weak_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-weak_user} -d ${DB_NAME:-weak_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -53,7 +53,7 @@ services:
       - .env
     environment:
       - DEBUG=False
-      - DATABASE_URL=postgresql://weak_user:${DB_PASSWORD:-changeme}@db:5432/weak_db
+      - DATABASE_URL=postgresql://${DB_USER:-weak_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-weak_db}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
     ports:
@@ -87,7 +87,7 @@ services:
       - .env
     environment:
       - DEBUG=False
-      - DATABASE_URL=postgresql://weak_user:${DB_PASSWORD:-changeme}@db:5432/weak_db
+      - DATABASE_URL=postgresql://${DB_USER:-weak_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-weak_db}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
