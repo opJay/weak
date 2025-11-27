@@ -10,6 +10,8 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from urllib.parse import urlparse
 import logging
+from django.conf import settings
+from django.db.models import Q
 
 from scanner.models import (
     ScanRequest,
@@ -77,6 +79,47 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
         user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
 
         try:
+            # 동시 스캔 제한 확인
+            if settings.MAX_CONCURRENT_SCANS > 0:
+                try:
+                    # Redis를 사용한 동시성 제어 (분산 환경 지원)
+                    import redis
+                    redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
+                    redis_client.ping()  # Redis 연결 확인
+
+                    running_scans_key = 'weak:running_scans'
+                    current_running = redis_client.scard(running_scans_key)
+
+                    if current_running >= settings.MAX_CONCURRENT_SCANS:
+                        logger.warning(f'Concurrent scan limit reached: {current_running}/{settings.MAX_CONCURRENT_SCANS}')
+                        return Response({
+                            'error': '동시 스캔 제한을 초과했습니다',
+                            'message': f'현재 {current_running}개의 스캔이 실행 중입니다. 잠시 후 다시 시도해주세요.',
+                            'current_scans': current_running,
+                            'max_allowed': settings.MAX_CONCURRENT_SCANS
+                        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+                    logger.info(f'Concurrent scans: {current_running}/{settings.MAX_CONCURRENT_SCANS}')
+
+                except Exception as redis_error:
+                    # Redis 사용 불가 시 DB 쿼리로 Fallback
+                    logger.warning(f'Redis unavailable for concurrency check, using DB: {str(redis_error)}')
+
+                    running_count = ScanRequest.objects.filter(
+                        Q(status='pending') | Q(status='running')
+                    ).count()
+
+                    if running_count >= settings.MAX_CONCURRENT_SCANS:
+                        logger.warning(f'Concurrent scan limit reached (DB): {running_count}/{settings.MAX_CONCURRENT_SCANS}')
+                        return Response({
+                            'error': '동시 스캔 제한을 초과했습니다',
+                            'message': f'현재 {running_count}개의 스캔이 실행 중입니다. 잠시 후 다시 시도해주세요.',
+                            'current_scans': running_count,
+                            'max_allowed': settings.MAX_CONCURRENT_SCANS
+                        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+                    logger.info(f'Concurrent scans (DB): {running_count}/{settings.MAX_CONCURRENT_SCANS}')
+
             # 스캔 요청 생성
             scan_request = ScanRequest.objects.create(
                 url=url,
@@ -97,6 +140,18 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
                 task = scan_website.delay(str(scan_request.id))
                 scan_request.task_id = task.id
                 scan_request.save()
+
+                # Redis에 실행 중인 스캔 추가 (동시성 제어용)
+                if settings.MAX_CONCURRENT_SCANS > 0:
+                    try:
+                        import redis
+                        redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
+                        running_scans_key = 'weak:running_scans'
+                        redis_client.sadd(running_scans_key, str(scan_request.id))
+                        redis_client.expire(running_scans_key, 7200)  # 2시간 자동 만료
+                        logger.info(f'Added scan {scan_request.id} to running scans set')
+                    except Exception as redis_add_error:
+                        logger.warning(f'Failed to add scan to Redis: {str(redis_add_error)}')
 
                 logger.info(f'Async scan started with Celery: {scan_request.id}')
                 message = 'Scan started (async)'
@@ -128,6 +183,19 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
                 thread = threading.Thread(target=run_scan_in_background, args=(str(scan_request.id),))
                 thread.daemon = True
                 thread.start()
+
+                # Redis에 실행 중인 스캔 추가 (동시성 제어용) - DB fallback 시에도 추가
+                if settings.MAX_CONCURRENT_SCANS > 0:
+                    try:
+                        import redis
+                        redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
+                        running_scans_key = 'weak:running_scans'
+                        redis_client.sadd(running_scans_key, str(scan_request.id))
+                        redis_client.expire(running_scans_key, 7200)  # 2시간 자동 만료
+                        logger.info(f'Added scan {scan_request.id} to running scans set (background mode)')
+                    except Exception as redis_add_error:
+                        # Redis 없으면 DB 상태로만 관리
+                        logger.warning(f'Failed to add scan to Redis (background mode): {str(redis_add_error)}')
 
                 # 상태를 running으로 변경
                 scan_request.status = 'running'

@@ -334,6 +334,9 @@ MAX_PAGES_TO_SCAN = config('MAX_PAGES_TO_SCAN', default=50, cast=int)
 # User-Agent
 USER_AGENT = config('USER_AGENT', default='Weak-Scanner/1.0 (Educational Purpose)')
 
+# 동시 스캔 제한 (0 = 무제한, 1+ = 최대 동시 스캔 개수)
+MAX_CONCURRENT_SCANS = config('MAX_CONCURRENT_SCANS', default=0, cast=int)
+
 # 차단할 IP 대역 (SSRF 방지)
 BLOCKED_IP_RANGES = [
     '127.0.0.0/8',     # Loopback
