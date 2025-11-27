@@ -9,6 +9,7 @@ class ProgressManager:
     # 각 스캔 타입별 스캐너 정의 (이름, 가중치)
     SCANNERS = {
         'security': [
+            # 기본 보안 스캐너 (15개)
             ('보안 헤더 검사', 1),
             ('SSL/TLS 검사', 1),
             ('XSS 취약점 스캔', 2),  # 더 중요한 검사는 가중치 높게
@@ -24,6 +25,17 @@ class ProgressManager:
             ('SRI 검사', 0.5),
             ('디렉토리 리스팅 검사', 0.5),
             ('Open Redirect 검사', 1),
+            # 고급 보안 스캐너 (10개 - scanners_advanced.py)
+            ('SSRF 취약점 검사', 2),
+            ('XXE 취약점 검사', 2),
+            ('Command Injection 검사', 2),
+            ('Deserialization 취약점 검사', 2),
+            ('파일 업로드 취약점 검사', 2),
+            ('경로 순회 공격 검사', 2),
+            ('JWT 보안 검사', 2),
+            ('템플릿 주입 검사', 2),
+            ('NoSQL Injection 검사', 2),
+            ('SSL/TLS 심층 검사', 2),
         ],
         'standards': [
             ('SEO 검사', 2),

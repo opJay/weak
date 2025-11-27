@@ -24,7 +24,8 @@ WEAK is a Django-based web vulnerability scanner that provides comprehensive sec
 ```
 weak/
 ├── scanner/          # Core scanning logic
-│   ├── scanners.py   # Scanner implementations with metadata
+│   ├── scanners.py   # Basic scanner implementations (15 scanners)
+│   ├── scanners_advanced.py  # Advanced security scanners (10 scanners)
 │   ├── tasks.py      # Background task processing
 │   ├── progress_manager.py  # Progress tracking system
 │   ├── security_scan_refactored.py  # Refactored security scanning
@@ -95,10 +96,43 @@ class ExampleScanner:
 ### Progress Management
 - Uses `ProgressManager` class for weighted distribution
 - Scanner counts per type:
-  - Security: 15 scanners
+  - Security: 25 scanners (15 basic + 10 advanced)
   - Standards: 4 scanners
   - Accessibility: 1 scanner
 - Progress updates via WebSocket or polling
+
+### Security Scanners List
+
+#### Basic Security Scanners (scanners.py - 15개)
+1. **XSSScanner** - Cross-Site Scripting 취약점
+2. **SQLInjectionScanner** - SQL Injection 취약점
+3. **SecurityHeaderScanner** - 보안 헤더 검사
+4. **CORSScanner** - CORS 설정 검사
+5. **CookieScanner** - 쿠키 보안 속성
+6. **CSRFScanner** - CSRF 토큰 검증
+7. **ClickjackingScanner** - 클릭재킹 방어
+8. **InformationDisclosureScanner** - 민감정보 노출
+9. **HTTPMethodScanner** - 위험한 HTTP 메서드
+10. **SensitiveFileScanner** - 민감한 파일 노출
+11. **MixedContentScanner** - HTTPS 페이지의 HTTP 리소스
+12. **SubresourceIntegrityScanner** - SRI 검사
+13. **DirectoryListingScanner** - 디렉토리 리스팅
+14. **OpenRedirectScanner** - 오픈 리다이렉트
+15. **check_ssl_tls** - SSL/TLS 기본 검사
+
+#### Advanced Security Scanners (scanners_advanced.py - 10개)
+실무급 고급 보안 취약점 탐지
+
+16. **SSRFScanner** - Server-Side Request Forgery (내부망 접근, Cloud Metadata 탈취)
+17. **XXEScanner** - XML External Entity (파일 읽기, SSRF 연계)
+18. **CommandInjectionScanner** - OS Command Injection (시스템 명령어 실행)
+19. **DeserializationScanner** - Insecure Deserialization (원격 코드 실행)
+20. **FileUploadScanner** - 파일 업로드 취약점 (웹쉘 업로드, 실행 파일)
+21. **PathTraversalScanner** - 경로 순회 공격 (LFI, 민감 파일 읽기)
+22. **JWTSecurityScanner** - JWT 보안 취약점 (alg:none, weak secret, 만료 검증)
+23. **TemplateInjectionScanner** - SSTI (Jinja2, Twig 템플릿 주입)
+24. **NoSQLInjectionScanner** - NoSQL Injection (MongoDB, Redis)
+25. **SSLTLSDeepScanner** - SSL/TLS 심층 검사 (약한 암호화, 인증서 검증)
 
 ## Database Design
 

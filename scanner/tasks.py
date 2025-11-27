@@ -586,6 +586,248 @@ def scan_security(scan_request_id):
                 recommendation=issue.get('recommendation', '')
             )
 
+        # === 고급 보안 스캐너 (scanners_advanced.py) ===
+
+        # 16. SSRF 취약점 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import SSRFScanner
+        ssrf_scanner = SSRFScanner(scan_request.url, response.text)
+        ssrf_results = ssrf_scanner.scan()
+        security_result.ssrf_vulnerabilities = ssrf_results
+        if meta := collect_scanner_metadata(SSRFScanner, ssrf_results):
+            scanner_metadata.append(meta)
+
+        for vuln in ssrf_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='injection',
+                vulnerability_type='ssrf',
+                severity=vuln.get('severity', 'critical'),
+                title=vuln.get('type', 'SSRF'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 17. XXE 취약점 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import XXEScanner
+        xxe_scanner = XXEScanner(scan_request.url, response, response.text)
+        xxe_results = xxe_scanner.scan()
+        security_result.xxe_vulnerabilities = xxe_results
+        if meta := collect_scanner_metadata(XXEScanner, xxe_results):
+            scanner_metadata.append(meta)
+
+        for vuln in xxe_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='injection',
+                vulnerability_type='xxe',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'XXE'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 18. Command Injection 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import CommandInjectionScanner
+        cmdi_scanner = CommandInjectionScanner(scan_request.url, response.text)
+        cmdi_results = cmdi_scanner.scan()
+        security_result.command_injection = cmdi_results
+        if meta := collect_scanner_metadata(CommandInjectionScanner, cmdi_results):
+            scanner_metadata.append(meta)
+
+        for vuln in cmdi_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='injection',
+                vulnerability_type='command_injection',
+                severity=vuln.get('severity', 'critical'),
+                title=vuln.get('type', 'Command Injection'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 19. Deserialization 취약점 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import DeserializationScanner
+        deser_scanner = DeserializationScanner(response, response.text)
+        deser_results = deser_scanner.scan()
+        security_result.deserialization = deser_results
+        if meta := collect_scanner_metadata(DeserializationScanner, deser_results):
+            scanner_metadata.append(meta)
+
+        for vuln in deser_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='injection',
+                vulnerability_type='deserialization',
+                severity=vuln.get('severity', 'critical'),
+                title=vuln.get('type', 'Insecure Deserialization'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 20. File Upload 취약점 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import FileUploadScanner
+        upload_scanner = FileUploadScanner(response.text)
+        upload_results = upload_scanner.scan()
+        security_result.file_upload = upload_results
+        if meta := collect_scanner_metadata(FileUploadScanner, upload_results):
+            scanner_metadata.append(meta)
+
+        for vuln in upload_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='broken_access_control',
+                vulnerability_type='file_upload',
+                severity=vuln.get('severity', 'critical'),
+                title=vuln.get('type', 'File Upload'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 21. Path Traversal 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import PathTraversalScanner
+        path_scanner = PathTraversalScanner(scan_request.url)
+        path_results = path_scanner.scan()
+        security_result.path_traversal = path_results
+        if meta := collect_scanner_metadata(PathTraversalScanner, path_results):
+            scanner_metadata.append(meta)
+
+        for vuln in path_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='broken_access_control',
+                vulnerability_type='path_traversal',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'Path Traversal'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 22. JWT 보안 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import JWTSecurityScanner
+        jwt_scanner = JWTSecurityScanner(response, response.text)
+        jwt_results = jwt_scanner.scan()
+        security_result.jwt_vulnerabilities = jwt_results
+        if meta := collect_scanner_metadata(JWTSecurityScanner, jwt_results):
+            scanner_metadata.append(meta)
+
+        for vuln in jwt_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='broken_authentication',
+                vulnerability_type='jwt_security',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'JWT Vulnerability'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 23. Template Injection (SSTI) 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import TemplateInjectionScanner
+        ssti_scanner = TemplateInjectionScanner(scan_request.url, response.text)
+        ssti_results = ssti_scanner.scan()
+        security_result.template_injection = ssti_results
+        if meta := collect_scanner_metadata(TemplateInjectionScanner, ssti_results):
+            scanner_metadata.append(meta)
+
+        for vuln in ssti_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='injection',
+                vulnerability_type='template_injection',
+                severity=vuln.get('severity', 'critical'),
+                title=vuln.get('type', 'Template Injection'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 24. NoSQL Injection 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import NoSQLInjectionScanner
+        nosql_scanner = NoSQLInjectionScanner(scan_request.url, response, response.text)
+        nosql_results = nosql_scanner.scan()
+        security_result.nosql_injection = nosql_results
+        if meta := collect_scanner_metadata(NoSQLInjectionScanner, nosql_results):
+            scanner_metadata.append(meta)
+
+        for vuln in nosql_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='injection',
+                vulnerability_type='nosql_injection',
+                severity=vuln.get('severity', 'critical'),
+                title=vuln.get('type', 'NoSQL Injection'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 25. SSL/TLS 심층 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_advanced import SSLTLSDeepScanner
+        ssl_deep_scanner = SSLTLSDeepScanner(scan_request.url)
+        ssl_deep_results = ssl_deep_scanner.scan()
+        security_result.ssl_tls_vulnerabilities = ssl_deep_results
+        if meta := collect_scanner_metadata(SSLTLSDeepScanner, ssl_deep_results):
+            scanner_metadata.append(meta)
+
+        for vuln in ssl_deep_results['vulnerabilities'][:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='security_misconfiguration',
+                vulnerability_type='ssl_tls',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'SSL/TLS Issue'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
         # 점수 계산 (강화)
         security_result.overall_score = calculate_security_score_ultra_advanced(
             security_result,

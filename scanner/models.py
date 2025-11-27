@@ -124,6 +124,18 @@ class SecurityScanResult(models.Model):
     cors_misconfiguration = models.JSONField(default=dict, verbose_name='CORS 설정 오류')
     open_redirects = models.JSONField(default=dict, verbose_name='오픈 리다이렉트')
 
+    # 고급 보안 취약점 (scanners_advanced.py)
+    ssrf_vulnerabilities = models.JSONField(default=dict, verbose_name='SSRF 취약점')
+    xxe_vulnerabilities = models.JSONField(default=dict, verbose_name='XXE 취약점')
+    command_injection = models.JSONField(default=dict, verbose_name='Command Injection')
+    deserialization = models.JSONField(default=dict, verbose_name='Deserialization 취약점')
+    file_upload = models.JSONField(default=dict, verbose_name='파일 업로드 취약점')
+    path_traversal = models.JSONField(default=dict, verbose_name='경로 순회 공격')
+    jwt_vulnerabilities = models.JSONField(default=dict, verbose_name='JWT 취약점')
+    template_injection = models.JSONField(default=dict, verbose_name='템플릿 주입')
+    nosql_injection = models.JSONField(default=dict, verbose_name='NoSQL Injection')
+    ssl_tls_vulnerabilities = models.JSONField(default=dict, verbose_name='SSL/TLS 취약점')
+
     # 스캐너 메타데이터
     scanner_metadata = models.JSONField(default=list, verbose_name='스캐너 메타데이터')
 
