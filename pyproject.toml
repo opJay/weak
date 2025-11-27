@@ -27,4 +27,5 @@ dependencies = [
     "requests>=2.32.5",
     "selenium>=4.38.0",
     "validators>=0.35.0",
+    "whitenoise>=6.8.2",
 ]

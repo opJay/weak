@@ -57,6 +57,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # 정적 파일 서빙
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # CORS - SessionMiddleware 다음에 위치
     'django.middleware.common.CommonMiddleware',
@@ -147,6 +148,11 @@ USE_TZ = True  # Timezone-aware datetimes 사용
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# WhiteNoise 설정 - Django가 직접 정적 파일 서빙
+WHITENOISE_AUTOREFRESH = DEBUG  # 개발 모드에서는 자동 새로고침
+WHITENOISE_COMPRESS_OFFLINE = not DEBUG  # 프로덕션에서만 압축
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' if not DEBUG else 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Media files (사용자 업로드 파일)
 MEDIA_URL = '/media/'

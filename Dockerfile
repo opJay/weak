@@ -46,7 +46,8 @@ RUN uv pip install --system \
     python-decouple \
     redis \
     requests \
-    validators
+    validators \
+    whitenoise
 
 # 애플리케이션 파일 복사 (의존성 설치 후)
 COPY . .
