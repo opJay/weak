@@ -23,26 +23,21 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml uv.lock* ./
 
 # 의존성 설치
-# uv.lock이 있으면 lock 파일에서, 없으면 pyproject.toml에서 직접 설치
 # --system 플래그로 가상환경이 아닌 시스템에 직접 설치
-RUN if [ -f uv.lock ]; then \
-        uv pip install --system -r pyproject.toml; \
-    else \
-        uv pip install --system \
-            django \
-            djangorestframework \
-            django-cors-headers \
-            celery \
-            redis \
-            requests \
-            beautifulsoup4 \
-            lxml \
-            python-decouple \
-            dj-database-url \
-            drf-spectacular \
-            gunicorn \
-            psycopg2-binary; \
-    fi
+RUN uv pip install --system \
+    django \
+    djangorestframework \
+    django-cors-headers \
+    celery \
+    redis \
+    requests \
+    beautifulsoup4 \
+    lxml \
+    python-decouple \
+    dj-database-url \
+    drf-spectacular \
+    gunicorn \
+    psycopg2-binary
 
 # 애플리케이션 파일 복사 (의존성 설치 후)
 COPY . .
