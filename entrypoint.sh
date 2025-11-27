@@ -49,13 +49,9 @@ else
     echo "[3/4] Skipping migrations (handled by web container)"
 fi
 
-# 정적 파일 수집 (프로덕션만)
-if [ "$DEBUG" = "False" ] || [ "$DEBUG" = "false" ]; then
-    echo "[4/4] Collecting static files..."
-    python manage.py collectstatic --noinput --clear
-else
-    echo "[4/4] Skipping collectstatic (DEBUG mode)"
-fi
+# 정적 파일 수집 (WhiteNoise를 위해 항상 실행)
+echo "[4/4] Collecting static files..."
+python manage.py collectstatic --noinput --clear
 
 echo "========================================"
 echo "Weak Scanner - Initialization Complete"

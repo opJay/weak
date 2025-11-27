@@ -150,9 +150,18 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # WhiteNoise 설정 - Django가 직접 정적 파일 서빙
-WHITENOISE_AUTOREFRESH = DEBUG  # 개발 모드에서는 자동 새로고침
-WHITENOISE_COMPRESS_OFFLINE = not DEBUG  # 프로덕션에서만 압축
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' if not DEBUG else 'django.contrib.staticfiles.storage.StaticFilesStorage'
+WHITENOISE_USE_FINDERS = True  # collectstatic 없이도 작동
+WHITENOISE_AUTOREFRESH = True  # 파일 변경 시 자동 새로고침
+
+# Django 5.1+ 새로운 스토리지 설정
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Media files (사용자 업로드 파일)
 MEDIA_URL = '/media/'
