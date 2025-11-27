@@ -714,6 +714,37 @@ python main.py createsuperuser
 python main.py setup
 ```
 
+## 배포
+
+### Docker를 사용한 빠른 배포
+
+```bash
+# 환경 변수 설정
+cp env.example .env
+# .env 파일 수정 (SECRET_KEY, DB_PASSWORD 등)
+
+# Docker Compose로 실행
+docker-compose up -d
+
+# 슈퍼유저 생성
+docker-compose exec web python manage.py createsuperuser
+
+# 접속
+# http://localhost:8000
+```
+
+### 프로덕션 배포
+
+프로덕션 환경 배포에 대한 상세한 가이드는 [DEPLOY.md](DEPLOY.md)를 참고하세요.
+
+**주요 내용:**
+- Docker Compose를 사용한 전체 스택 배포
+- Nginx 리버스 프록시 설정
+- SSL/TLS 인증서 (Let's Encrypt)
+- AWS, GCP, Azure 클라우드 배포
+- 백업 및 복구 전략
+- 모니터링 및 로깅
+
 ## 향후 개발 계획
 
 ### 완료된 기능 ✅
@@ -722,21 +753,24 @@ python main.py setup
 - [x] 3단계 위저드 인터페이스
 - [x] 가중치 기반 진행률 계산
 - [x] 통과/실패 모든 테스트에 대한 상세 정보
-- [x] **OWASP Top 10 2025 RC1 대응 (35개 보안 스캐너)**
+- [x] **OWASP Top 10 2025 RC1 대응 (50개 보안 스캐너)**
   - Software Supply Chain 보안 스캐너
   - Exception Handling 보안 스캐너
+  - 비즈니스 로직 및 설계 취약점 스캐너
+  - 공급망 보안 강화 스캐너
+  - 데이터 무결성 강화 스캐너
+- [x] **CI/CD 파이프라인 구축** (GitHub Actions)
+- [x] **Docker 컨테이너화** (프로덕션 & 개발 환경)
 
 ### 개발 예정 📋
+- [ ] 사용자 인증 및 스캔 히스토리
 - [ ] Playwright/Selenium을 이용한 브라우저 자동화
 - [ ] W3C Validator API 통합
 - [ ] 크롤링 기능 (하위 페이지 스캔)
 - [ ] 더 정교한 XSS/SQL Injection 탐지
 - [ ] PDF 리포트 생성
-- [ ] 사용자 인증 및 스캔 히스토리
 - [ ] 스케줄링 (주기적 스캔)
-- [ ] Docker 컨테이너화
 - [ ] 다국어 지원 (영어 추가)
-- [ ] CI/CD 파이프라인 구축
 
 ## 트러블슈팅
 

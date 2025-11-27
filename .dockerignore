@@ -1,0 +1,98 @@
+# ============================================
+# Docker Ignore File
+# ============================================
+# Docker 이미지 빌드 시 제외할 파일 및 디렉토리
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Database
+*.sqlite3
+db.sqlite3
+*.db
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Documentation (개발용)
+*.md
+!README.md
+
+# Claude Code
+.claude/
+
+# Static and Media (프로덕션에서는 collectstatic으로 재생성)
+staticfiles/
+media/
+
+# Backups
+*.backup
+*.bak
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+
+# Test
+tests/
+test_*.py
+*_test.py
+
+# Temporary
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,117 @@
+# ============================================
+# Weak Scanner - Docker Compose (Production)
+# ============================================
+# 프로덕션 환경용 Docker Compose 설정
+# PostgreSQL + Redis + Celery를 사용한 전체 스택 구성
+
+version: '3.8'
+
+services:
+  # PostgreSQL 데이터베이스
+  db:
+    image: postgres:16-alpine
+    container_name: weak_db
+    environment:
+      POSTGRES_DB: weak_db
+      POSTGRES_USER: weak_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - weak_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weak_user -d weak_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (Celery Broker & Cache)
+  redis:
+    image: redis:7-alpine
+    container_name: weak_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - weak_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django Web Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weak_web
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 300
+    env_file:
+      - .env
+    environment:
+      - DEBUG=False
+      - DATABASE_URL=postgresql://weak_user:${DB_PASSWORD:-changeme}@db:5432/weak_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - weak_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery Worker (비동기 스캔 처리)
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weak_celery
+    command: celery -A config worker --loglevel=info --concurrency=2
+    env_file:
+      - .env
+    environment:
+      - DEBUG=False
+      - DATABASE_URL=postgresql://weak_user:${DB_PASSWORD:-changeme}@db:5432/weak_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - weak_network
+    restart: unless-stopped
+
+networks:
+  weak_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  static_volume:
+    driver: local
+  media_volume:
+    driver: local

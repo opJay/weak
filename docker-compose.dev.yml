@@ -1,0 +1,70 @@
+# ============================================
+# Weak Scanner - Docker Compose (Development)
+# ============================================
+# 개발 환경용 Docker Compose 설정
+# SQLite + Redis를 사용한 간소화된 구성
+# 핫 리로드 및 디버그 모드 지원
+
+version: '3.8'
+
+services:
+  # Redis (Celery Broker & Cache)
+  redis:
+    image: redis:7-alpine
+    container_name: weak_redis_dev
+    command: redis-server
+    ports:
+      - "6379:6379"
+    networks:
+      - weak_network_dev
+    restart: unless-stopped
+
+  # Django Web Application (Development)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weak_web_dev
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - .env
+    environment:
+      - DEBUG=True
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app  # 소스 코드 마운트 (핫 리로드)
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - weak_network_dev
+    restart: unless-stopped
+
+  # Celery Worker (Development)
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weak_celery_dev
+    command: celery -A config worker --loglevel=debug --concurrency=1
+    env_file:
+      - .env
+    environment:
+      - DEBUG=True
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    volumes:
+      - .:/app  # 소스 코드 마운트
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - weak_network_dev
+    restart: unless-stopped
+
+networks:
+  weak_network_dev:
+    driver: bridge
