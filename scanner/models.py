@@ -146,6 +146,10 @@ class SecurityScanResult(models.Model):
     ldap_injection = models.JSONField(default=dict, verbose_name='LDAP Injection')
     authorization_vulnerabilities = models.JSONField(default=dict, verbose_name='Authorization 취약점')
 
+    # OWASP 2025 신규 대응 스캐너 (scanners_supply_chain.py, scanners_exception.py)
+    supply_chain_vulnerabilities = models.JSONField(default=dict, verbose_name='Supply Chain 취약점')
+    exception_handling_vulnerabilities = models.JSONField(default=dict, verbose_name='Exception Handling 취약점')
+
     # 스캐너 메타데이터
     scanner_metadata = models.JSONField(default=list, verbose_name='스캐너 메타데이터')
 

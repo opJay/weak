@@ -45,6 +45,9 @@ class ProgressManager:
             ('Rate Limiting 검사', 1.5),
             ('LDAP Injection 검사', 1.5),
             ('Authorization 검사', 2),
+            # OWASP 2025 신규 대응 스캐너 (2개)
+            ('Software Supply Chain 검사', 2),
+            ('Exception Handling 검사', 1.5),
         ],
         'standards': [
             ('SEO 검사', 2),

@@ -1022,6 +1022,54 @@ def scan_security(scan_request_id):
                 evidence=str(vuln)[:500]
             )
 
+        # 34. Software Supply Chain 검사 (OWASP 2025 A03)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_supply_chain import SoftwareSupplyChainScanner
+        supply_chain_scanner = SoftwareSupplyChainScanner(scan_request.url, response, response.text)
+        supply_chain_results = supply_chain_scanner.scan()
+        security_result.supply_chain_vulnerabilities = supply_chain_results
+        if meta := collect_scanner_metadata(SoftwareSupplyChainScanner, supply_chain_results):
+            scanner_metadata.append(meta)
+
+        for vuln in supply_chain_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='software_supply_chain',
+                vulnerability_type='supply_chain',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('title', 'Supply Chain'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 35. Exception Handling 검사 (OWASP 2025 A10)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_exception import ExceptionHandlingScanner
+        exception_scanner = ExceptionHandlingScanner(scan_request.url, response, response.text)
+        exception_results = exception_scanner.scan()
+        security_result.exception_handling_vulnerabilities = exception_results
+        if meta := collect_scanner_metadata(ExceptionHandlingScanner, exception_results):
+            scanner_metadata.append(meta)
+
+        for vuln in exception_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='exception_handling',
+                vulnerability_type='error_exposure',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Exception Handling'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
         # 점수 계산 (강화)
         security_result.overall_score = calculate_security_score_ultra_advanced(
             security_result,
