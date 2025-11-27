@@ -150,6 +150,15 @@ class SecurityScanResult(models.Model):
     supply_chain_vulnerabilities = models.JSONField(default=dict, verbose_name='Supply Chain 취약점')
     exception_handling_vulnerabilities = models.JSONField(default=dict, verbose_name='Exception Handling 취약점')
 
+    # 비즈니스 로직 및 설계 취약점 (scanners_business_logic.py)
+    price_manipulation_vulnerabilities = models.JSONField(default=dict, verbose_name='가격 조작 취약점')
+    race_condition_vulnerabilities = models.JSONField(default=dict, verbose_name='레이스 컨디션 취약점')
+    workflow_bypass_vulnerabilities = models.JSONField(default=dict, verbose_name='워크플로우 우회 취약점')
+    account_enumeration_vulnerabilities = models.JSONField(default=dict, verbose_name='계정 열거 취약점')
+    resource_exhaustion_vulnerabilities = models.JSONField(default=dict, verbose_name='리소스 소진 취약점')
+    logging_monitoring_vulnerabilities = models.JSONField(default=dict, verbose_name='로깅/모니터링 취약점')
+    business_logic_anomaly_vulnerabilities = models.JSONField(default=dict, verbose_name='비즈니스 로직 이상')
+
     # 스캐너 메타데이터
     scanner_metadata = models.JSONField(default=list, verbose_name='스캐너 메타데이터')
 

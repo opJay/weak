@@ -1070,6 +1070,174 @@ def scan_security(scan_request_id):
                 evidence=str(vuln)[:500]
             )
 
+        # 36. Price Manipulation 검사 (OWASP 2025 A06)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_business_logic import PriceManipulationScanner
+        price_scanner = PriceManipulationScanner(scan_request.url, response, response.text)
+        price_results = price_scanner.scan()
+        security_result.price_manipulation_vulnerabilities = price_results
+        if meta := collect_scanner_metadata(PriceManipulationScanner, price_results):
+            scanner_metadata.append(meta)
+
+        for vuln in price_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='business_logic',
+                vulnerability_type='price_manipulation',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Price Manipulation'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 37. Race Condition 검사 (OWASP 2025 A06)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_business_logic import RaceConditionScanner
+        race_scanner = RaceConditionScanner(scan_request.url, response, response.text)
+        race_results = race_scanner.scan()
+        security_result.race_condition_vulnerabilities = race_results
+        if meta := collect_scanner_metadata(RaceConditionScanner, race_results):
+            scanner_metadata.append(meta)
+
+        for vuln in race_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='business_logic',
+                vulnerability_type='race_condition',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Race Condition'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 38. Workflow Bypass 검사 (OWASP 2025 A06)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_business_logic import WorkflowBypassScanner
+        workflow_scanner = WorkflowBypassScanner(scan_request.url, response, response.text)
+        workflow_results = workflow_scanner.scan()
+        security_result.workflow_bypass_vulnerabilities = workflow_results
+        if meta := collect_scanner_metadata(WorkflowBypassScanner, workflow_results):
+            scanner_metadata.append(meta)
+
+        for vuln in workflow_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='business_logic',
+                vulnerability_type='workflow_bypass',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Workflow Bypass'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 39. Account Enumeration 검사 (OWASP 2025 A06+A07)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_business_logic import AccountEnumerationScanner
+        account_scanner = AccountEnumerationScanner(scan_request.url, response, response.text)
+        account_results = account_scanner.scan()
+        security_result.account_enumeration_vulnerabilities = account_results
+        if meta := collect_scanner_metadata(AccountEnumerationScanner, account_results):
+            scanner_metadata.append(meta)
+
+        for vuln in account_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='business_logic',
+                vulnerability_type='account_enumeration',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Account Enumeration'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 40. Resource Exhaustion 검사 (OWASP 2025 A06)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_business_logic import ResourceExhaustionScanner
+        resource_scanner = ResourceExhaustionScanner(scan_request.url, response, response.text)
+        resource_results = resource_scanner.scan()
+        security_result.resource_exhaustion_vulnerabilities = resource_results
+        if meta := collect_scanner_metadata(ResourceExhaustionScanner, resource_results):
+            scanner_metadata.append(meta)
+
+        for vuln in resource_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='business_logic',
+                vulnerability_type='resource_exhaustion',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Resource Exhaustion'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 41. Logging & Monitoring 검사 (OWASP 2025 A09)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_business_logic import LoggingMonitoringScanner
+        logging_scanner = LoggingMonitoringScanner(scan_request.url, response, response.text)
+        logging_results = logging_scanner.scan()
+        security_result.logging_monitoring_vulnerabilities = logging_results
+        if meta := collect_scanner_metadata(LoggingMonitoringScanner, logging_results):
+            scanner_metadata.append(meta)
+
+        for vuln in logging_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='logging',
+                vulnerability_type='logging_monitoring',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Logging & Monitoring'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 42. Business Logic Anomaly 검사 (OWASP 2025 A06)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_business_logic import BusinessLogicAnomalyScanner
+        anomaly_scanner = BusinessLogicAnomalyScanner(scan_request.url, response, response.text)
+        anomaly_results = anomaly_scanner.scan()
+        security_result.business_logic_anomaly_vulnerabilities = anomaly_results
+        if meta := collect_scanner_metadata(BusinessLogicAnomalyScanner, anomaly_results):
+            scanner_metadata.append(meta)
+
+        for vuln in anomaly_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='business_logic',
+                vulnerability_type='business_logic_anomaly',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Business Logic Anomaly'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
         # 점수 계산 (강화)
         security_result.overall_score = calculate_security_score_ultra_advanced(
             security_result,
