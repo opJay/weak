@@ -23,10 +23,12 @@ URL을 입력하면 웹 취약점을 자동으로 분석해주는 싱글페이�
 
 ## 주요 기능
 
-### 🔒 보안 스캔 (엔터프라이즈급 - 33개 검사 항목)
+### 🔒 보안 스캔 (OWASP 2025 대응 - 35개 검사 항목)
+
+**OWASP Top 10 2025 RC1 기준 최신 보안 표준 적용**
 
 #### 1. 기본 보안 스캐너 (15개)
-OWASP Top 10 기반 필수 취약점 탐지
+OWASP Top 10 2021/2025 기반 필수 취약점 탐지
 
 - **XSS (Cross-Site Scripting)**
   - Reflected XSS - URL 파라미터 분석
@@ -120,9 +122,10 @@ OWASP Top 10 기반 필수 취약점 탐지
 
 #### 13. 종합 보안 점수
 
-- 33개 검사 항목 기반 가중치 점수 (0-100)
+- 35개 검사 항목 기반 가중치 점수 (0-100)
 - 위험 등급: Critical / High / Medium / Low
 - 취약점별 상세 리포트 및 권장 사항
+- **OWASP Top 10 2025 RC1 완전 대응**
 
 #### 2. 고급 보안 스캐너 (10개)
 실무 환경에서 발생하는 치명적인 취약점 탐지
@@ -235,6 +238,25 @@ OWASP Top 10 기반 필수 취약점 탐지
   - 수평적 권한 상승 가능성
   - 수직적 권한 상승 가능성
   - 리소스 접근 제어 검증
+
+#### 4. OWASP 2025 신규 대응 스캐너 (2개)
+OWASP Top 10 2025 RC1의 새로운 보안 위협 탐지
+
+- **Software Supply Chain 보안 (A03:2025)**
+  - 종속성 파일 노출 검사 (package.json, requirements.txt, pom.xml 등)
+  - SRI (Subresource Integrity) 미사용 탐지
+  - 취약한 라이브러리 버전 검사 (jQuery, Bootstrap, React 등)
+  - CDN 리소스 무결성 검증
+  - crossorigin 속성 누락 탐지
+  - 공급망 보안 권장사항 제공
+
+- **Exception Handling 보안 (A10:2025)**
+  - 스택 트레이스 노출 탐지 (Python, Java, .NET, PHP, Ruby, Node.js)
+  - 데이터베이스 에러 메시지 노출 (MySQL, PostgreSQL, Oracle, SQL Server)
+  - 디버그 모드 활성화 탐지 (DEBUG=True, development mode)
+  - 내부 경로 노출 검사 (Windows, Unix, macOS 경로)
+  - 잘못된 입력으로 상세 에러 유도 테스트
+  - 커스텀 에러 페이지 구현 권장
 
 ### 📊 웹 표준 검사 (강화 버전)
 
@@ -439,9 +461,11 @@ weak/
 │   ├── scanners.py     # 기본 취약점 스캐너 (15개)
 │   ├── scanners_advanced.py  # 고급 보안 스캐너 (10개)
 │   ├── scanners_api.py       # API 및 인증/인가 스캐너 (8개)
+│   ├── scanners_supply_chain.py  # OWASP 2025 공급망 스캐너 (1개)
+│   ├── scanners_exception.py     # OWASP 2025 예외 처리 스캐너 (1개)
 │   ├── security_scan_refactored.py  # 리팩토링된 보안 스캐너
 │   ├── standards_checker.py  # 웹 표준 검증
-│   ├── progress_manager.py  # 진행률 관리
+│   ├── progress_manager.py  # 진행률 관리 (35개 스캐너)
 │   └── admin.py        # 관리자 페이지
 ├── api/                # REST API
 │   ├── views.py        # API 엔드포인트
@@ -572,6 +596,9 @@ python main.py setup
 - [x] 3단계 위저드 인터페이스
 - [x] 가중치 기반 진행률 계산
 - [x] 통과/실패 모든 테스트에 대한 상세 정보
+- [x] **OWASP Top 10 2025 RC1 대응 (35개 보안 스캐너)**
+  - Software Supply Chain 보안 스캐너
+  - Exception Handling 보안 스캐너
 
 ### 개발 예정 📋
 - [ ] Playwright/Selenium을 이용한 브라우저 자동화

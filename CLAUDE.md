@@ -27,8 +27,10 @@ weak/
 │   ├── scanners.py   # Basic scanner implementations (15 scanners)
 │   ├── scanners_advanced.py  # Advanced security scanners (10 scanners)
 │   ├── scanners_api.py  # API/Auth security scanners (8 scanners)
+│   ├── scanners_supply_chain.py  # OWASP 2025 supply chain scanner (1 scanner)
+│   ├── scanners_exception.py  # OWASP 2025 exception handling scanner (1 scanner)
 │   ├── tasks.py      # Background task processing
-│   ├── progress_manager.py  # Progress tracking system
+│   ├── progress_manager.py  # Progress tracking system (35 scanners total)
 │   ├── security_scan_refactored.py  # Refactored security scanning
 │   ├── standards_checker.py  # Web standards validation
 │   └── models.py     # Database models
@@ -97,7 +99,8 @@ class ExampleScanner:
 ### Progress Management
 - Uses `ProgressManager` class for weighted distribution
 - Scanner counts per type:
-  - Security: 33 scanners (15 basic + 10 advanced + 8 API/auth)
+  - Security: 35 scanners (15 basic + 10 advanced + 8 API/auth + 2 OWASP 2025)
+- **OWASP Top 10 2025 RC1 compliant**
   - Standards: 4 scanners
   - Accessibility: 1 scanner
 - Progress updates via WebSocket or polling
