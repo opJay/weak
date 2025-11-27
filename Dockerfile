@@ -38,6 +38,7 @@ RUN if [ -f uv.lock ]; then \
             beautifulsoup4 \
             lxml \
             python-decouple \
+            dj-database-url \
             drf-spectacular \
             gunicorn \
             psycopg2-binary; \
