@@ -828,6 +828,200 @@ def scan_security(scan_request_id):
                 evidence=str(vuln)[:500]
             )
 
+        # === API 및 인증/인가 보안 스캐너 (scanners_api.py) ===
+
+        # 26. REST API 보안 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_api import RESTAPISecurityScanner
+        rest_api_scanner = RESTAPISecurityScanner(scan_request.url, response, response.text)
+        rest_api_results = rest_api_scanner.scan()
+        security_result.rest_api_vulnerabilities = rest_api_results
+        if meta := collect_scanner_metadata(RESTAPISecurityScanner, rest_api_results):
+            scanner_metadata.append(meta)
+
+        for vuln in rest_api_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='api_security',
+                vulnerability_type='rest_api',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'REST API Security'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 27. GraphQL 보안 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_api import GraphQLSecurityScanner
+        graphql_scanner = GraphQLSecurityScanner(scan_request.url, response.text)
+        graphql_results = graphql_scanner.scan()
+        security_result.graphql_vulnerabilities = graphql_results
+        if meta := collect_scanner_metadata(GraphQLSecurityScanner, graphql_results):
+            scanner_metadata.append(meta)
+
+        for vuln in graphql_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='api_security',
+                vulnerability_type='graphql',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'GraphQL Security'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 28. OAuth 보안 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_api import OAuthSecurityScanner
+        oauth_scanner = OAuthSecurityScanner(scan_request.url, response.text)
+        oauth_results = oauth_scanner.scan()
+        security_result.oauth_vulnerabilities = oauth_results
+        if meta := collect_scanner_metadata(OAuthSecurityScanner, oauth_results):
+            scanner_metadata.append(meta)
+
+        for vuln in oauth_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='broken_authentication',
+                vulnerability_type='oauth',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'OAuth Security'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 29. Session 보안 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_api import SessionSecurityScanner
+        session_scanner = SessionSecurityScanner(response, scan_request.url)
+        session_results = session_scanner.scan()
+        security_result.session_vulnerabilities = session_results
+        if meta := collect_scanner_metadata(SessionSecurityScanner, session_results):
+            scanner_metadata.append(meta)
+
+        for vuln in session_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='broken_authentication',
+                vulnerability_type='session',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'Session Security'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 30. Password Policy 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_api import PasswordPolicyScanner
+        password_scanner = PasswordPolicyScanner(response.text, scan_request.url)
+        password_results = password_scanner.scan()
+        security_result.password_policy = password_results
+        if meta := collect_scanner_metadata(PasswordPolicyScanner, password_results):
+            scanner_metadata.append(meta)
+
+        for vuln in password_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='broken_authentication',
+                vulnerability_type='password_policy',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('type', 'Password Policy'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 31. Rate Limiting 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_api import RateLimitingScanner
+        rate_limit_scanner = RateLimitingScanner(response, scan_request.url)
+        rate_limit_results = rate_limit_scanner.scan()
+        security_result.rate_limiting = rate_limit_results
+        if meta := collect_scanner_metadata(RateLimitingScanner, rate_limit_results):
+            scanner_metadata.append(meta)
+
+        for vuln in rate_limit_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='security_misconfiguration',
+                vulnerability_type='rate_limiting',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'Rate Limiting'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 32. LDAP Injection 검사
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_api import LDAPInjectionScanner
+        ldap_scanner = LDAPInjectionScanner(scan_request.url, response.text)
+        ldap_results = ldap_scanner.scan()
+        security_result.ldap_injection = ldap_results
+        if meta := collect_scanner_metadata(LDAPInjectionScanner, ldap_results):
+            scanner_metadata.append(meta)
+
+        for vuln in ldap_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='injection',
+                vulnerability_type='ldap_injection',
+                severity=vuln.get('severity', 'high'),
+                title=vuln.get('type', 'LDAP Injection'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 33. Authorization 검사 (BOLA/IDOR)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_api import AuthorizationScanner
+        authz_scanner = AuthorizationScanner(scan_request.url)
+        authz_results = authz_scanner.scan()
+        security_result.authorization_vulnerabilities = authz_results
+        if meta := collect_scanner_metadata(AuthorizationScanner, authz_results):
+            scanner_metadata.append(meta)
+
+        for vuln in authz_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='broken_access_control',
+                vulnerability_type='authorization',
+                severity=vuln.get('severity', 'critical'),
+                title=vuln.get('type', 'Authorization'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
         # 점수 계산 (강화)
         security_result.overall_score = calculate_security_score_ultra_advanced(
             security_result,

@@ -36,6 +36,15 @@ class ProgressManager:
             ('템플릿 주입 검사', 2),
             ('NoSQL Injection 검사', 2),
             ('SSL/TLS 심층 검사', 2),
+            # API 및 인증/인가 스캐너 (8개 - scanners_api.py)
+            ('REST API 보안 검사', 2),
+            ('GraphQL 보안 검사', 2),
+            ('OAuth 보안 검사', 2),
+            ('Session 보안 검사', 2),
+            ('Password Policy 검사', 1.5),
+            ('Rate Limiting 검사', 1.5),
+            ('LDAP Injection 검사', 1.5),
+            ('Authorization 검사', 2),
         ],
         'standards': [
             ('SEO 검사', 2),

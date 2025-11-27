@@ -136,6 +136,16 @@ class SecurityScanResult(models.Model):
     nosql_injection = models.JSONField(default=dict, verbose_name='NoSQL Injection')
     ssl_tls_vulnerabilities = models.JSONField(default=dict, verbose_name='SSL/TLS 취약점')
 
+    # API 및 인증/인가 취약점 (scanners_api.py)
+    rest_api_vulnerabilities = models.JSONField(default=dict, verbose_name='REST API 취약점')
+    graphql_vulnerabilities = models.JSONField(default=dict, verbose_name='GraphQL 취약점')
+    oauth_vulnerabilities = models.JSONField(default=dict, verbose_name='OAuth 취약점')
+    session_vulnerabilities = models.JSONField(default=dict, verbose_name='Session 취약점')
+    password_policy = models.JSONField(default=dict, verbose_name='비밀번호 정책')
+    rate_limiting = models.JSONField(default=dict, verbose_name='Rate Limiting')
+    ldap_injection = models.JSONField(default=dict, verbose_name='LDAP Injection')
+    authorization_vulnerabilities = models.JSONField(default=dict, verbose_name='Authorization 취약점')
+
     # 스캐너 메타데이터
     scanner_metadata = models.JSONField(default=list, verbose_name='스캐너 메타데이터')
 

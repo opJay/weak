@@ -26,6 +26,7 @@ weak/
 ├── scanner/          # Core scanning logic
 │   ├── scanners.py   # Basic scanner implementations (15 scanners)
 │   ├── scanners_advanced.py  # Advanced security scanners (10 scanners)
+│   ├── scanners_api.py  # API/Auth security scanners (8 scanners)
 │   ├── tasks.py      # Background task processing
 │   ├── progress_manager.py  # Progress tracking system
 │   ├── security_scan_refactored.py  # Refactored security scanning
@@ -96,7 +97,7 @@ class ExampleScanner:
 ### Progress Management
 - Uses `ProgressManager` class for weighted distribution
 - Scanner counts per type:
-  - Security: 25 scanners (15 basic + 10 advanced)
+  - Security: 33 scanners (15 basic + 10 advanced + 8 API/auth)
   - Standards: 4 scanners
   - Accessibility: 1 scanner
 - Progress updates via WebSocket or polling
@@ -133,6 +134,18 @@ class ExampleScanner:
 23. **TemplateInjectionScanner** - SSTI (Jinja2, Twig 템플릿 주입)
 24. **NoSQLInjectionScanner** - NoSQL Injection (MongoDB, Redis)
 25. **SSLTLSDeepScanner** - SSL/TLS 심층 검사 (약한 암호화, 인증서 검증)
+
+#### API 및 인증/인가 스캐너 (scanners_api.py - 8개)
+현대 웹 애플리케이션의 API 및 인증 보안
+
+26. **RESTAPISecurityScanner** - REST API 보안 (Rate Limit, Mass Assignment, Data Exposure)
+27. **GraphQLSecurityScanner** - GraphQL 보안 (Introspection, Query Depth, Batch Attack)
+28. **OAuthSecurityScanner** - OAuth 인증 취약점 (CSRF, Open Redirect, Code Reuse)
+29. **SessionSecurityScanner** - 세션 관리 취약점 (Session Fixation, Hijacking)
+30. **PasswordPolicyScanner** - 비밀번호 정책 (복잡도, Brute Force 방어)
+31. **RateLimitingScanner** - Rate Limiting 검사 (API/로그인 제한)
+32. **LDAPInjectionScanner** - LDAP Injection
+33. **AuthorizationScanner** - BOLA/IDOR (객체/함수 레벨 인가 오류)
 
 ## Database Design
 
