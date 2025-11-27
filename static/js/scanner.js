@@ -90,7 +90,10 @@ async function handleScanSubmit(e) {
                     const message = data.message || '현재 스캔이 많이 실행 중입니다. 잠시 후 다시 시도해주세요.';
 
                     alert(`⏳ 동시 스캔 제한 초과\n\n${message}\n\n현재 실행 중: ${currentScans}개\n최대 허용: ${maxAllowed}개`);
-                    throw new Error('동시 스캔 제한 초과');
+
+                    // Reset to Step 1 and return (no throw to avoid duplicate alert)
+                    resetToScanForm();
+                    return;
                 }
 
                 throw new Error(data.error || data.details || '스캔 요청 실패');

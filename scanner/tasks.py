@@ -32,19 +32,19 @@ logger = logging.getLogger('scanner')
 def remove_from_running_scans(scan_request_id):
     """
     Redis에서 실행 중인 스캔 목록에서 제거 (동시성 제어용)
+
+    Note: MAX_CONCURRENT_SCANS 값과 무관하게 항상 제거 시도
+    (추가는 조건부, 제거는 무조건 - 일관성 유지)
     """
-    if settings.MAX_CONCURRENT_SCANS > 0:
-        try:
-            import redis
-            redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
-            running_scans_key = 'weak:running_scans'
-            removed = redis_client.srem(running_scans_key, str(scan_request_id))
-            if removed:
-                logger.info(f'Removed scan {scan_request_id} from running scans set')
-            else:
-                logger.warning(f'Scan {scan_request_id} was not in running scans set')
-        except Exception as redis_error:
-            logger.warning(f'Failed to remove scan from Redis: {str(redis_error)}')
+    try:
+        import redis
+        redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
+        running_scans_key = 'weak:running_scans'
+        removed = redis_client.srem(running_scans_key, str(scan_request_id))
+        if removed:
+            logger.info(f'Removed scan {scan_request_id} from running scans set')
+    except Exception as redis_error:
+        logger.warning(f'Failed to remove scan from Redis: {str(redis_error)}')
 
 
 def scan_website_sync(scan_request_id):
@@ -198,6 +198,9 @@ def scan_website(self, scan_request_id):
             scan_request.progress = 100
             scan_request.save()
 
+            # Redis에서 실행 중인 스캔 목록에서 제거
+            remove_from_running_scans(scan_request_id)
+
             logger.info(f'Scan completed (sync) for {scan_request.url}')
 
             return {
@@ -247,6 +250,9 @@ def complete_scan(results, scan_request_id):
         scan_request.completed_at = timezone.now()
         scan_request.progress = 100
         scan_request.save()
+
+        # Redis에서 실행 중인 스캔 목록에서 제거
+        remove_from_running_scans(scan_request_id)
 
         logger.info(f'All scans completed for {scan_request.url}')
 
