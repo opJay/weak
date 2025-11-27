@@ -2,7 +2,7 @@
 Celery Tasks
 비동기 스캔 작업 처리
 """
-from celery import shared_task, group
+from celery import shared_task, group, chord
 from django.utils import timezone
 from django.conf import settings
 import logging
@@ -120,7 +120,7 @@ def scan_website_sync(scan_request_id):
 def scan_website(self, scan_request_id):
     """
     메인 스캔 작업
-    여러 스캔 유형을 병렬로 실행 (또는 동기 실행)
+    여러 스캔 유형을 병렬로 실행 (Chord 사용) 또는 동기 실행
     """
     try:
         scan_request = ScanRequest.objects.get(id=scan_request_id)
@@ -132,9 +132,9 @@ def scan_website(self, scan_request_id):
         logger.info(f'Starting scan for {scan_request.url}')
 
         # 스캔 유형에 따라 작업 실행
-        # Celery 사용 가능하면 비동기, 아니면 동기
+        # Celery 사용 가능하면 비동기 (Chord), 아니면 동기
         try:
-            # Celery 비동기 실행 시도
+            # Celery 비동기 실행 시도 (Chord 사용)
             tasks = []
             if 'security' in scan_request.scan_types:
                 tasks.append(scan_security.s(scan_request_id))
@@ -144,9 +144,15 @@ def scan_website(self, scan_request_id):
                 tasks.append(scan_accessibility.s(scan_request_id))
 
             if tasks:
-                job = group(tasks)
-                result = job.apply_async()
-                result.get()  # 모든 작업 완료 대기
+                # Chord: 모든 태스크 완료 후 complete_scan 콜백 호출
+                job = chord(tasks)(complete_scan.s(str(scan_request_id)))
+                logger.info(f'Scan started with Celery chord for {scan_request.url}')
+
+                # 비동기 실행이므로 바로 반환 (완료는 complete_scan에서 처리)
+                return {
+                    'scan_id': str(scan_request.id),
+                    'status': 'running'
+                }
 
         except Exception as celery_error:
             # Celery 사용 불가 시 동기 실행
@@ -161,20 +167,20 @@ def scan_website(self, scan_request_id):
             if 'accessibility' in scan_request.scan_types:
                 scan_accessibility(scan_request_id)
 
-        # 완료 처리
-        scan_request.refresh_from_db()
-        scan_request.status = 'completed'
-        scan_request.completed_at = timezone.now()
-        scan_request.progress = 100
-        scan_request.save()
+            # 동기 실행 시 직접 완료 처리
+            scan_request.refresh_from_db()
+            scan_request.status = 'completed'
+            scan_request.completed_at = timezone.now()
+            scan_request.progress = 100
+            scan_request.save()
 
-        logger.info(f'Scan completed for {scan_request.url}')
+            logger.info(f'Scan completed (sync) for {scan_request.url}')
 
-        return {
-            'scan_id': str(scan_request.id),
-            'status': 'completed',
-            'duration': scan_request.duration()
-        }
+            return {
+                'scan_id': str(scan_request.id),
+                'status': 'completed',
+                'duration': scan_request.duration()
+            }
 
     except ScanRequest.DoesNotExist:
         logger.error(f'Scan request {scan_request_id} not found')
@@ -198,6 +204,33 @@ def scan_website(self, scan_request_id):
             raise self.retry(exc=e, countdown=60)
         else:
             raise
+
+
+@shared_task
+def complete_scan(results, scan_request_id):
+    """
+    모든 스캔 완료 후 호출되는 Callback (Chord의 마지막 단계)
+    Args:
+        results: 각 스캔 태스크의 결과 리스트
+        scan_request_id: 스캔 요청 ID
+    """
+    try:
+        scan_request = ScanRequest.objects.get(id=scan_request_id)
+        scan_request.status = 'completed'
+        scan_request.completed_at = timezone.now()
+        scan_request.progress = 100
+        scan_request.save()
+
+        logger.info(f'All scans completed for {scan_request.url}')
+
+        return {
+            'scan_id': str(scan_request.id),
+            'status': 'completed',
+            'duration': scan_request.duration()
+        }
+    except Exception as e:
+        logger.error(f'Failed to complete scan {scan_request_id}: {str(e)}')
+        raise
 
 
 def collect_scanner_metadata(scanner_class_or_func, results):

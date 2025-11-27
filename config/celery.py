@@ -27,10 +27,10 @@ app.conf.beat_schedule = {
     # },
 }
 
-# 기본 태스크 설정
-app.conf.task_routes = {
-    'scanner.tasks.*': {'queue': 'scanner'},
-}
+# 기본 태스크 설정 (기본 'celery' 큐 사용)
+# app.conf.task_routes = {
+#     'scanner.tasks.*': {'queue': 'scanner'},
+# }
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
