@@ -380,7 +380,8 @@ SESSION_COOKIE_HTTPONLY = True
 
 # 프로덕션 환경에서는 다음 설정들을 활성화하세요
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    # Cloudflare나 리버스 프록시가 HTTPS를 처리하는 경우 False로 설정
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
@@ -389,3 +390,9 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
+# Cloudflare/리버스 프록시 사용 시 설정
+if config('USE_X_FORWARDED_HOST', default=False, cast=bool):
+    USE_X_FORWARDED_HOST = True
+    USE_X_FORWARDED_PORT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
