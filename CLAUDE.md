@@ -30,8 +30,10 @@ weak/
 │   ├── scanners_supply_chain.py  # OWASP 2025 supply chain scanner (1 scanner)
 │   ├── scanners_exception.py  # OWASP 2025 exception handling scanner (1 scanner)
 │   ├── scanners_business_logic.py  # Business logic scanners (7 scanners)
+│   ├── scanners_supply_chain_advanced.py  # Supply chain advanced (4 scanners)
+│   ├── scanners_integrity_advanced.py  # Data integrity advanced (4 scanners)
 │   ├── tasks.py      # Background task processing
-│   ├── progress_manager.py  # Progress tracking system (42 scanners total)
+│   ├── progress_manager.py  # Progress tracking system (50 scanners total)
 │   ├── security_scan_refactored.py  # Refactored security scanning
 │   ├── standards_checker.py  # Web standards validation
 │   └── models.py     # Database models
@@ -100,8 +102,8 @@ class ExampleScanner:
 ### Progress Management
 - Uses `ProgressManager` class for weighted distribution
 - Scanner counts per type:
-  - Security: 42 scanners (15 basic + 10 advanced + 8 API/auth + 2 OWASP 2025 + 7 business logic)
-- **OWASP Top 10 2025 RC1 compliant (~92% coverage)**
+  - Security: 50 scanners (15 basic + 10 advanced + 8 API/auth + 2 OWASP 2025 + 7 business logic + 4 supply chain advanced + 4 data integrity advanced)
+- **OWASP Top 10 2025 RC1 compliant (~95% coverage)**
   - Standards: 4 scanners
   - Accessibility: 1 scanner
 - Progress updates via WebSocket or polling
@@ -168,15 +170,31 @@ OWASP A06 (Insecure Design) 및 A09 (Logging & Monitoring) 강화
 41. **LoggingMonitoringScanner** - A09:2025 로깅/모니터링 (Trace ID, 보안 이벤트)
 42. **BusinessLogicAnomalyScanner** - A06:2025 비즈니스 로직 이상 (할인 조작, 수량 제한)
 
-**OWASP Top 10 2025 RC1 커버리지: ~92%**
+#### 공급망 보안 강화 (scanners_supply_chain_advanced.py - 4개)
+OWASP A03:2025 (Software Supply Chain) 75% → 90% 강화
+
+43. **PackageIntegrityScanner** - 패키지 무결성 검증 (lockfile 해시, SHA-512 검증, 무결성 누락)
+44. **TyposquattingScanner** - 타이포스쿼팅 탐지 (유사 패키지명, 블랙리스트, 의심스러운 패턴)
+45. **OutdatedDependencyScanner** - 오래된 종속성 검사 (CVE 패턴 매칭, EOL 패키지, 최소 안전 버전)
+46. **LicenseComplianceScanner** - 라이선스 준수 검사 (GPL/AGPL 검출, 비상업적 라이선스, 라이선스 누락)
+
+#### 데이터 무결성 강화 (scanners_integrity_advanced.py - 4개)
+OWASP A08:2025 (Data Integrity Failures) 75% → 90% 강화
+
+47. **JWTAdvancedScanner** - JWT 고급 보안 검증 (알고리즘 혼동, kid 조작, 약한 시크릿, Claims 검증, JWK 노출)
+48. **SerializationIntegrityScanner** - 직렬화 무결성 검증 (서명 없는 직렬화, Pickle/PHP/Java 직렬화 탐지)
+49. **APIIntegrityScanner** - API 응답 무결성 검사 (X-Signature, ETag, Content-MD5, SRI)
+50. **ChecksumValidationScanner** - 체크섬 검증 (약한 해시 알고리즘, SHA256SUMS, MD5SUMS)
+
+**OWASP Top 10 2025 RC1 커버리지: ~95%**
 - A01 (Broken Access Control): 100%
 - A02 (Cryptographic Failures): 100%
-- A03 (Software Supply Chain): 75%
+- A03 (Software Supply Chain): 90% (75%→90%, 공급망 고급 스캐너 4개 추가)
 - A04 (Injection): 100%
 - A05 (Security Misconfiguration): 80%
 - A06 (Insecure Design): 90% (비즈니스 로직 스캐너 7개 추가로 45%→90%)
 - A07 (Authentication Failures): 100%
-- A08 (Data Integrity Failures): 75%
+- A08 (Data Integrity Failures): 90% (75%→90%, 데이터 무결성 고급 스캐너 4개 추가)
 - A09 (Logging & Monitoring): 85% (20%→85%)
 - A10 (Exception Handling): 100%
 

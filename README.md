@@ -23,7 +23,7 @@ URL을 입력하면 웹 취약점을 자동으로 분석해주는 싱글페이�
 
 ## 주요 기능
 
-### 🔒 보안 스캔 (OWASP 2025 대응 - 42개 검사 항목)
+### 🔒 보안 스캔 (OWASP 2025 대응 - 50개 검사 항목)
 
 **OWASP Top 10 2025 RC1 기준 최신 보안 표준 적용**
 
@@ -122,7 +122,7 @@ OWASP Top 10 2021/2025 기반 필수 취약점 탐지
 
 #### 13. 종합 보안 점수
 
-- 42개 검사 항목 기반 가중치 점수 (0-100)
+- 50개 검사 항목 기반 가중치 점수 (0-100)
 - 위험 등급: Critical / High / Medium / Low
 - 취약점별 상세 리포트 및 권장 사항
 - **OWASP Top 10 2025 RC1 완전 대응**
@@ -313,6 +313,75 @@ OWASP A06 (Insecure Design) 및 A09 (Logging & Monitoring) 강화
 - A07 (Authentication Failures): 100%
 - A08 (Data Integrity Failures): 75%
 - A09 (Logging & Monitoring): 85% ⬆️
+- A10 (Exception Handling): 100%
+
+#### 6. 공급망 보안 강화 (4개 스캐너) - A03 90% 달성
+OWASP A03 (Software Supply Chain Failures) 특화 강화
+
+- **패키지 무결성 검증**
+  - package-lock.json의 integrity 해시 검증
+  - yarn.lock, requirements.txt 무결성
+  - composer.lock content-hash 검증
+  - SHA-512 해시 누락 탐지
+
+- **타이포스쿼팅 탐지**
+  - 유사 패키지명 악성 코드 탐지 (lodash → loadash)
+  - 레벤슈타인 거리 기반 유사도 분석
+  - 알려진 타이포스쿼팅 블랙리스트
+  - 의심스러운 패키지명 패턴 검사
+
+- **오래된 종속성 강화 검사**
+  - 알려진 CVE 취약점 패턴 매칭
+  - EOL (End of Life) 패키지 탐지
+  - 주요 라이브러리 보안 버전 확인
+  - Django, Flask, Express, React 등 취약 버전
+
+- **라이선스 준수 검사**
+  - GPL, AGPL 등 Copyleft 라이선스 탐지
+  - 상업적 사용 제한 라이선스 경고
+  - LICENSE 파일 존재 확인
+  - package.json, README 라이선스 정보
+
+#### 7. 데이터 무결성 강화 (4개 스캐너) - A08 90% 달성
+OWASP A08 (Data Integrity Failures) 특화 강화
+
+- **JWT 고급 보안 검증**
+  - 알고리즘 혼동 공격 (HS256 → RS256)
+  - Algorithm None Attack 탐지
+  - kid (Key ID) 조작 공격 (Path Traversal, SQLi, Command Injection)
+  - 약한 HMAC secret 경고
+  - JWT claims 검증 (exp, iat, iss, aud, nbf, jti)
+  - JWK 공개키/개인키 노출 탐지
+  - 민감 정보 Payload 포함 경고
+
+- **직렬화 무결성 검증**
+  - 서명 없는 직렬화 데이터 탐지
+  - Python Pickle, PHP Serialize, Java Serialization 패턴
+  - 쿠키 및 Hidden 필드 직렬화 검사
+  - HMAC 서명 존재 확인
+
+- **API 응답 무결성 검사**
+  - X-Signature 헤더 확인
+  - ETag 사용 검증
+  - Content-MD5 체크
+  - GraphQL 응답 서명
+
+- **체크섬 검증**
+  - SHA256SUMS, MD5SUMS 파일 확인
+  - 약한 해시 알고리즘 경고 (MD5, SHA1)
+  - SRI (integrity 속성) 누락 탐지
+  - 다운로드 파일 체크섬 정보
+
+**📈 OWASP Top 10 2025 RC1 최종 커버리지: ~95%**
+- A01 (Broken Access Control): 100%
+- A02 (Cryptographic Failures): 100%
+- A03 (Software Supply Chain): 90% ⬆️⬆️
+- A04 (Injection): 100%
+- A05 (Security Misconfiguration): 80%
+- A06 (Insecure Design): 90%
+- A07 (Authentication Failures): 100%
+- A08 (Data Integrity Failures): 90% ⬆️⬆️
+- A09 (Logging & Monitoring): 85%
 - A10 (Exception Handling): 100%
 
 ### 📊 웹 표준 검사 (강화 버전)
