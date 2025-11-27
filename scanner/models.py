@@ -159,6 +159,18 @@ class SecurityScanResult(models.Model):
     logging_monitoring_vulnerabilities = models.JSONField(default=dict, verbose_name='로깅/모니터링 취약점')
     business_logic_anomaly_vulnerabilities = models.JSONField(default=dict, verbose_name='비즈니스 로직 이상')
 
+    # 공급망 보안 강화 (scanners_supply_chain_advanced.py)
+    package_integrity_vulnerabilities = models.JSONField(default=dict, verbose_name='패키지 무결성 취약점')
+    typosquatting_vulnerabilities = models.JSONField(default=dict, verbose_name='타이포스쿼팅 취약점')
+    outdated_dependency_vulnerabilities = models.JSONField(default=dict, verbose_name='오래된 종속성 취약점')
+    license_compliance_vulnerabilities = models.JSONField(default=dict, verbose_name='라이선스 준수 취약점')
+
+    # 데이터 무결성 강화 (scanners_integrity_advanced.py)
+    jwt_advanced_vulnerabilities = models.JSONField(default=dict, verbose_name='JWT 고급 취약점')
+    serialization_integrity_vulnerabilities = models.JSONField(default=dict, verbose_name='직렬화 무결성 취약점')
+    api_integrity_vulnerabilities = models.JSONField(default=dict, verbose_name='API 무결성 취약점')
+    checksum_validation_vulnerabilities = models.JSONField(default=dict, verbose_name='체크섬 검증 취약점')
+
     # 스캐너 메타데이터
     scanner_metadata = models.JSONField(default=list, verbose_name='스캐너 메타데이터')
 

@@ -1238,6 +1238,198 @@ def scan_security(scan_request_id):
                 evidence=str(vuln)[:500]
             )
 
+        # 43. Package Integrity 검사 (A03 강화)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_supply_chain_advanced import PackageIntegrityScanner
+        pkg_integrity_scanner = PackageIntegrityScanner(scan_request.url, response, response.text)
+        pkg_integrity_results = pkg_integrity_scanner.scan()
+        security_result.package_integrity_vulnerabilities = pkg_integrity_results
+        if meta := collect_scanner_metadata(PackageIntegrityScanner, pkg_integrity_results):
+            scanner_metadata.append(meta)
+
+        for vuln in pkg_integrity_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='supply_chain',
+                vulnerability_type='package_integrity',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Package Integrity'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 44. Typosquatting 탐지 (A03 강화)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_supply_chain_advanced import TyposquattingScanner
+        typo_scanner = TyposquattingScanner(scan_request.url, response, response.text)
+        typo_results = typo_scanner.scan()
+        security_result.typosquatting_vulnerabilities = typo_results
+        if meta := collect_scanner_metadata(TyposquattingScanner, typo_results):
+            scanner_metadata.append(meta)
+
+        for vuln in typo_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='supply_chain',
+                vulnerability_type='typosquatting',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Typosquatting'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 45. Outdated Dependency 검사 (A03 강화)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_supply_chain_advanced import OutdatedDependencyScanner
+        outdated_scanner = OutdatedDependencyScanner(scan_request.url, response, response.text)
+        outdated_results = outdated_scanner.scan()
+        security_result.outdated_dependency_vulnerabilities = outdated_results
+        if meta := collect_scanner_metadata(OutdatedDependencyScanner, outdated_results):
+            scanner_metadata.append(meta)
+
+        for vuln in outdated_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='supply_chain',
+                vulnerability_type='outdated_dependency',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Outdated Dependency'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 46. License Compliance 검사 (A03 강화)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_supply_chain_advanced import LicenseComplianceScanner
+        license_scanner = LicenseComplianceScanner(scan_request.url, response, response.text)
+        license_results = license_scanner.scan()
+        security_result.license_compliance_vulnerabilities = license_results
+        if meta := collect_scanner_metadata(LicenseComplianceScanner, license_results):
+            scanner_metadata.append(meta)
+
+        for vuln in license_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='supply_chain',
+                vulnerability_type='license_compliance',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'License Compliance'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 47. JWT Advanced 검사 (A08 강화)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_integrity_advanced import JWTAdvancedScanner
+        jwt_adv_scanner = JWTAdvancedScanner(scan_request.url, response, response.text)
+        jwt_adv_results = jwt_adv_scanner.scan()
+        security_result.jwt_advanced_vulnerabilities = jwt_adv_results
+        if meta := collect_scanner_metadata(JWTAdvancedScanner, jwt_adv_results):
+            scanner_metadata.append(meta)
+
+        for vuln in jwt_adv_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='data_integrity',
+                vulnerability_type='jwt_advanced',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'JWT Advanced'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 48. Serialization Integrity 검사 (A08 강화)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_integrity_advanced import SerializationIntegrityScanner
+        serialization_scanner = SerializationIntegrityScanner(scan_request.url, response, response.text)
+        serialization_results = serialization_scanner.scan()
+        security_result.serialization_integrity_vulnerabilities = serialization_results
+        if meta := collect_scanner_metadata(SerializationIntegrityScanner, serialization_results):
+            scanner_metadata.append(meta)
+
+        for vuln in serialization_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='data_integrity',
+                vulnerability_type='serialization_integrity',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Serialization Integrity'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 49. API Integrity 검사 (A08 강화)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_integrity_advanced import APIIntegrityScanner
+        api_integrity_scanner = APIIntegrityScanner(scan_request.url, response, response.text)
+        api_integrity_results = api_integrity_scanner.scan()
+        security_result.api_integrity_vulnerabilities = api_integrity_results
+        if meta := collect_scanner_metadata(APIIntegrityScanner, api_integrity_results):
+            scanner_metadata.append(meta)
+
+        for vuln in api_integrity_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='data_integrity',
+                vulnerability_type='api_integrity',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'API Integrity'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
+        # 50. Checksum Validation 검사 (A08 강화)
+        progress, name = pm.next_progress('security')
+        logger.info(f'{name}: {progress:.1f}%')
+        scan_request.progress = progress
+        scan_request.save()
+        from .scanners_integrity_advanced import ChecksumValidationScanner
+        checksum_scanner = ChecksumValidationScanner(scan_request.url, response, response.text)
+        checksum_results = checksum_scanner.scan()
+        security_result.checksum_validation_vulnerabilities = checksum_results
+        if meta := collect_scanner_metadata(ChecksumValidationScanner, checksum_results):
+            scanner_metadata.append(meta)
+
+        for vuln in checksum_results.get('vulnerabilities', [])[:5]:
+            Vulnerability.objects.create(
+                scan_request=scan_request,
+                category='data_integrity',
+                vulnerability_type='checksum_validation',
+                severity=vuln.get('severity', 'medium'),
+                title=vuln.get('title', 'Checksum Validation'),
+                description=vuln.get('description', ''),
+                recommendation=vuln.get('recommendation', ''),
+                evidence=str(vuln)[:500]
+            )
+
         # 점수 계산 (강화)
         security_result.overall_score = calculate_security_score_ultra_advanced(
             security_result,
