@@ -239,12 +239,19 @@ uv run python manage.py createsuperuser
 
 ## 11. 다음 단계
 
-- [ ] 추가 취약점 탐지 로직 구현
+### 완료된 기능 ✅
+- [x] 고급 취약점 탐지 로직 구현 (33개 보안 스캐너)
+  - 기본 보안 스캐너 15개 (OWASP Top 10 기반)
+  - 고급 보안 스캐너 10개 (SSRF, XXE, Command Injection 등)
+  - API 및 인증/인가 스캐너 8개 (REST API, GraphQL, OAuth 등)
+
+### 개발 예정 📋
 - [ ] Playwright/Selenium을 사용한 브라우저 자동화
 - [ ] W3C Validator API 통합
-- [ ] 심층 스캔 기능 강화
+- [ ] 크롤링 기능 (하위 페이지 자동 스캔)
 - [ ] 결과 PDF 리포트 생성
 - [ ] 사용자 인증 및 스캔 히스토리
+- [ ] 스케줄링 (주기적 스캔)
 
 ## 도움이 필요하신가요?
 

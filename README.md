@@ -23,9 +23,10 @@ URL을 입력하면 웹 취약점을 자동으로 분석해주는 싱글페이�
 
 ## 주요 기능
 
-### 🔒 보안 스캔 (초강화 버전 - 15개 검사 항목)
+### 🔒 보안 스캔 (엔터프라이즈급 - 33개 검사 항목)
 
-#### 1. OWASP Top 10 취약점 탐지
+#### 1. 기본 보안 스캐너 (15개)
+OWASP Top 10 기반 필수 취약점 탐지
 
 - **XSS (Cross-Site Scripting)**
   - Reflected XSS - URL 파라미터 분석
@@ -119,9 +120,121 @@ URL을 입력하면 웹 취약점을 자동으로 분석해주는 싱글페이�
 
 #### 13. 종합 보안 점수
 
-- 15개 검사 항목 기반 가중치 점수 (0-100)
+- 33개 검사 항목 기반 가중치 점수 (0-100)
 - 위험 등급: Critical / High / Medium / Low
 - 취약점별 상세 리포트 및 권장 사항
+
+#### 2. 고급 보안 스캐너 (10개)
+실무 환경에서 발생하는 치명적인 취약점 탐지
+
+- **SSRF (Server-Side Request Forgery)**
+  - 내부 IP 주소로의 요청 시도 (127.0.0.1, 169.254.169.254 등)
+  - 클라우드 메타데이터 서비스 접근 (AWS, Azure, GCP)
+  - localhost, internal 도메인 접근 시도
+  - URL 파라미터를 통한 SSRF 벡터 탐지
+
+- **XXE (XML External Entity)**
+  - XML 파서 사용 여부 확인
+  - Content-Type: application/xml 응답 분석
+  - External Entity 처리 가능성 탐지
+  - DTD(Document Type Definition) 선언 검사
+
+- **Command Injection**
+  - 시스템 명령어 주입 가능성 탐지
+  - 특수 문자 필터링 검증 (;, |, &, `, $, 개행 문자 등)
+  - URL 파라미터 및 폼 입력 분석
+  - 안전한 API 사용 권장
+
+- **Deserialization 취약점**
+  - 직렬화된 객체 탐지 (pickle, Java serialization, PHP serialize)
+  - 안전하지 않은 역직렬화 패턴 분석
+  - 쿠키 및 세션 데이터 검사
+
+- **파일 업로드 취약점**
+  - 파일 업로드 폼 존재 여부 확인
+  - Accept 속성 제한 검사
+  - 파일 타입 검증 누락 탐지
+  - 실행 가능 파일 업로드 가능성
+
+- **경로 순회 공격 (Path Traversal)**
+  - ../ 및 ..\ 패턴 필터링 검사
+  - URL 파라미터에서 파일 경로 사용 탐지
+  - 절대 경로 접근 시도
+  - 안전한 경로 검증 권장
+
+- **JWT (JSON Web Token) 보안**
+  - None 알고리즘 사용 취약점
+  - 약한 서명 알고리즘 (HS256 with weak secret)
+  - JWT 만료 시간 검증
+  - 알고리즘 혼동 공격 가능성
+
+- **템플릿 주입 (Template Injection)**
+  - 서버 측 템플릿 엔진 사용 탐지 (Jinja2, Twig, FreeMarker 등)
+  - 템플릿 표현식 패턴 검사
+  - 사용자 입력의 템플릿 처리 여부 확인
+
+- **NoSQL Injection**
+  - MongoDB 쿼리 연산자 주입 가능성 ($gt, $ne, $regex 등)
+  - JavaScript 표현식 주입 탐지
+  - NoSQL 에러 메시지 노출 검사
+  - Prepared Statements 사용 권장
+
+- **SSL/TLS 심층 검사**
+  - 약한 암호화 알고리즘 탐지 (RC4, DES, 3DES)
+  - 프로토콜 버전 검사 (SSLv2, SSLv3, TLS 1.0/1.1 사용 경고)
+  - Perfect Forward Secrecy (PFS) 지원 여부
+  - 인증서 체인 검증
+
+#### 3. API 및 인증/인가 스캐너 (8개)
+현대 웹 애플리케이션의 API 및 인증 시스템 보안 검증
+
+- **REST API 보안**
+  - Rate Limiting 부재 탐지
+  - 과도한 데이터 노출 (Excessive Data Exposure)
+  - Mass Assignment 취약점
+  - API 버전 관리 검사
+  - 적절한 HTTP 상태 코드 사용 여부
+
+- **GraphQL 보안**
+  - Introspection 쿼리 활성화 여부
+  - Query Depth/Complexity 제한 검사
+  - Batch Query 공격 가능성
+  - Field Suggestions 정보 노출
+
+- **OAuth 보안**
+  - redirect_uri 검증 부재
+  - state 파라미터 누락 (CSRF 방어)
+  - Authorization Code 재사용 가능성
+  - Implicit Flow 사용 경고 (deprecated)
+
+- **세션 보안**
+  - 세션 ID 예측 가능성
+  - 고정 세션 공격 (Session Fixation) 가능성
+  - 세션 타임아웃 설정 검사
+  - 로그아웃 후 세션 무효화 검증
+
+- **비밀번호 정책**
+  - 최소 길이 요구사항 확인
+  - 복잡도 요구사항 (대소문자, 숫자, 특수문자)
+  - 일반적인 비밀번호 사용 방지
+  - 비밀번호 강도 미터 존재 여부
+
+- **Rate Limiting**
+  - 로그인 시도 제한 검사
+  - API 요청 제한 검사
+  - 429 Too Many Requests 응답 확인
+  - Retry-After 헤더 존재 여부
+
+- **LDAP Injection**
+  - LDAP 쿼리 사용 가능성 탐지
+  - 특수 문자 필터링 검증 (*, (, ), \, NULL)
+  - LDAP 에러 메시지 노출 검사
+
+- **인가 검사 (Authorization)**
+  - BOLA/IDOR (Broken Object Level Authorization) 취약점
+  - 수평적 권한 상승 가능성
+  - 수직적 권한 상승 가능성
+  - 리소스 접근 제어 검증
 
 ### 📊 웹 표준 검사 (강화 버전)
 
@@ -323,7 +436,9 @@ weak/
 ├── scanner/            # 메인 스캐너 앱
 │   ├── models.py       # 데이터 모델
 │   ├── tasks.py        # Celery 비동기 작업
-│   ├── scanners.py     # 취약점 스캐너 (통합)
+│   ├── scanners.py     # 기본 취약점 스캐너 (15개)
+│   ├── scanners_advanced.py  # 고급 보안 스캐너 (10개)
+│   ├── scanners_api.py       # API 및 인증/인가 스캐너 (8개)
 │   ├── security_scan_refactored.py  # 리팩토링된 보안 스캐너
 │   ├── standards_checker.py  # 웹 표준 검증
 │   ├── progress_manager.py  # 진행률 관리
