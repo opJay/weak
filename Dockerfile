@@ -20,14 +20,30 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # 의존성 파일 복사
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock* ./
 
-# 의존성 설치 (프로덕션용)
-RUN uv pip install --system gunicorn psycopg2-binary
+# 의존성 설치
+# uv.lock이 있으면 사용하고, 없으면 pyproject.toml에서 직접 설치
+RUN if [ -f uv.lock ]; then \
+        uv sync --frozen --no-dev; \
+    else \
+        uv pip install --system \
+            django \
+            djangorestframework \
+            django-cors-headers \
+            celery \
+            redis \
+            requests \
+            beautifulsoup4 \
+            lxml \
+            python-decouple \
+            drf-spectacular \
+            gunicorn \
+            psycopg2-binary; \
+    fi
 
-# uv sync로 나머지 의존성 설치
+# 애플리케이션 파일 복사 (의존성 설치 후)
 COPY . .
-RUN uv sync --frozen --no-dev
 
 # ============================================
 # Stage 2: Runtime
