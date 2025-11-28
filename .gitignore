@@ -55,3 +55,4 @@ logs/*
 
 # Windows specific
 nul
+.coverage
