@@ -728,3 +728,222 @@ class SSLTLSDeepScanner:
     def scan(self) -> Dict[str, Any]:
         return self.scanner.scan()
 
+
+# ================== Batch 7: 비즈니스 로직 스캐너 ==================
+
+class PriceManipulationScanner:
+    """PriceManipulationScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'price_manipulation',
+        'name': '가격 조작 탐지',
+        'icon': '💰',
+        'description': '비즈니스 로직 - 가격/수량 조작 취약점 탐지',
+        'weight': 1.5,
+        'field': 'price_manipulation_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch7 import PriceManipulationScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_business_logic import PriceManipulationScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class RaceConditionScanner:
+    """RaceConditionScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'race_condition',
+        'name': '레이스 컨디션 탐지',
+        'icon': '🏁',
+        'description': '비즈니스 로직 - 동시성 제어 취약점 탐지',
+        'weight': 1.5,
+        'field': 'race_condition_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch7 import RaceConditionScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_business_logic import RaceConditionScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class WorkflowBypassScanner:
+    """WorkflowBypassScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'workflow_bypass',
+        'name': '워크플로우 우회 탐지',
+        'icon': '🔀',
+        'description': '비즈니스 로직 - 프로세스 단계 우회 탐지',
+        'weight': 1,
+        'field': 'workflow_bypass_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch7 import WorkflowBypassScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_business_logic import WorkflowBypassScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class AccountEnumerationScanner:
+    """AccountEnumerationScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'account_enumeration',
+        'name': '계정 열거 탐지',
+        'icon': '👤',
+        'description': '비즈니스 로직 - 계정 존재 여부 유출 탐지',
+        'weight': 1,
+        'field': 'account_enumeration_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch7 import AccountEnumerationScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_business_logic import AccountEnumerationScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class ResourceExhaustionScanner:
+    """ResourceExhaustionScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'resource_exhaustion',
+        'name': '리소스 소진 탐지',
+        'icon': '📈',
+        'description': '비즈니스 로직 - 리소스 고갈 공격 가능성 탐지',
+        'weight': 1,
+        'field': 'resource_exhaustion_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch7 import ResourceExhaustionScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_business_logic import ResourceExhaustionScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class LoggingMonitoringScanner:
+    """LoggingMonitoringScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'logging_monitoring',
+        'name': '로깅/모니터링 검사',
+        'icon': '📋',
+        'description': 'A09 대응 - 로깅 및 모니터링 구현 검증',
+        'weight': 1.5,
+        'field': 'logging_monitoring_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch7 import LoggingMonitoringScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_business_logic import LoggingMonitoringScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class BusinessLogicAnomalyScanner:
+    """BusinessLogicAnomalyScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'business_logic_anomaly',
+        'name': '비즈니스 로직 이상 탐지',
+        'icon': '🔍',
+        'description': '비즈니스 로직 - 이상 패턴 및 악용 가능성 탐지',
+        'weight': 1,
+        'field': 'business_logic_anomaly_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch7 import BusinessLogicAnomalyScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_business_logic import BusinessLogicAnomalyScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
