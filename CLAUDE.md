@@ -24,7 +24,13 @@ WEAK is a Django-based web vulnerability scanner that provides comprehensive sec
 ```
 weak/
 ├── scanner/          # Core scanning logic
+│   ├── base.py       # BaseScanner 기본 클래스 (템플릿 메서드 패턴)
 │   ├── scanners.py   # Basic scanner implementations (15 scanners)
+│   ├── scanners_refactored.py  # 리팩토링된 스캐너 Batch 1 (2개)
+│   ├── scanners_refactored_batch1.py  # 리팩토링된 스캐너 Batch 1 (3개)
+│   ├── scanners_refactored_batch2.py  # 리팩토링된 스캐너 Batch 2 (5개)
+│   ├── scanners_compat.py  # 호환성 레이어 (점진적 마이그레이션)
+│   ├── scanner_migration.py  # 마이그레이션 매핑 관리
 │   ├── scanners_advanced.py  # Advanced security scanners (10 scanners)
 │   ├── scanners_api.py  # API/Auth security scanners (8 scanners)
 │   ├── scanners_supply_chain.py  # OWASP 2025 supply chain scanner (1 scanner)
@@ -55,6 +61,15 @@ weak/
 │   │   └── wizard.css    # Three-step wizard styles
 │   └── js/
 │       └── scanner.js    # Frontend logic with detailed views
+├── tests/            # 테스트 코드 (새로 추가됨)
+│   ├── conftest.py   # pytest 설정 및 fixtures
+│   ├── unit/         # 단위 테스트
+│   │   ├── test_refactored_scanners.py  # Batch 1 테스트 (19개)
+│   │   └── test_batch2_scanners.py      # Batch 2 테스트 (33개)
+│   ├── integration/  # 통합 테스트
+│   │   └── test_integration.py          # tasks.py 통합 테스트
+│   └── golden/       # Golden test 스냅샷
+│       └── *.json    # 실제 웹사이트 스캔 결과
 ├── config/           # Django settings
 │   ├── settings.py   # Main settings
 │   ├── celery.py     # Celery configuration
@@ -68,6 +83,9 @@ weak/
 - **Self-contained scanners**: Each scanner class contains its own metadata
 - **No central registry**: Scanners manage their own configuration
 - **Weighted progress system**: Dynamic progress calculation based on scanner weights
+- **BaseScanner pattern**: Template method pattern for standardized interfaces (리팩토링됨)
+- **Dependency injection**: HTTP 클라이언트 주입으로 테스트 가능성 향상
+- **Compatibility layer**: scanners_compat.py를 통한 점진적 마이그레이션
 
 ### UI/UX Philosophy
 - **Three-step wizard pattern**: Input → Progress → Results
@@ -80,6 +98,8 @@ weak/
 ## Scanner Implementation Guidelines
 
 ### Scanner Class Structure
+
+#### 기존 패턴 (Original Pattern)
 ```python
 class ExampleScanner:
     """Scanner description"""
@@ -97,6 +117,33 @@ class ExampleScanner:
     def scan(self, url, content):
         # Implementation
         return results
+```
+
+#### 리팩토링된 패턴 (Refactored Pattern with BaseScanner)
+```python
+from scanner.base import BaseScanner
+
+class ExampleScanner(BaseScanner):
+    """Scanner description"""
+
+    metadata = {
+        'id': 'unique_id',
+        'name': 'Display Name',
+        'icon': '🔍',
+        'description': 'What this scanner does',
+        'weight': 1,
+        'field': 'result_field_name'
+    }
+
+    def _execute_scan(self) -> None:
+        """Template method implementation"""
+        # 스캔 로직 구현
+        # self.vulnerabilities 또는 self.issues에 결과 추가
+        pass
+
+    def _get_additional_fields(self) -> Dict[str, Any]:
+        """추가 필드 반환"""
+        return {'custom_field': 'value'}
 ```
 
 ### Progress Management

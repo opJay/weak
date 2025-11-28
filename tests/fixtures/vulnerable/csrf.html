@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF Vulnerable Test Page</title>
+</head>
+<body>
+    <h1>CSRF 취약점 테스트 페이지</h1>
+
+    <!-- CSRF 토큰 없는 송금 폼 -->
+    <form method="POST" action="/transfer">
+        <h2>송금</h2>
+        <label>받는 계좌: <input type="text" name="to_account" value="123456789"></label><br>
+        <label>금액: <input type="number" name="amount" value="10000"></label><br>
+        <label>메모: <input type="text" name="memo"></label><br>
+        <button type="submit">송금하기</button>
+    </form>
+
+    <!-- CSRF 토큰 없는 비밀번호 변경 폼 -->
+    <form method="POST" action="/change-password">
+        <h2>비밀번호 변경</h2>
+        <label>새 비밀번호: <input type="password" name="new_password"></label><br>
+        <label>비밀번호 확인: <input type="password" name="confirm_password"></label><br>
+        <button type="submit">변경</button>
+    </form>
+
+    <!-- CSRF 토큰 없는 계정 삭제 폼 -->
+    <form method="POST" action="/delete-account">
+        <h2>계정 삭제</h2>
+        <label>비밀번호 확인: <input type="password" name="password"></label><br>
+        <label><input type="checkbox" name="confirm"> 정말 삭제하시겠습니까?</label><br>
+        <button type="submit" style="color: red;">계정 삭제</button>
+    </form>
+
+    <!-- CSRF 토큰 없는 이메일 변경 폼 -->
+    <form method="POST" action="/update-email">
+        <h2>이메일 변경</h2>
+        <label>새 이메일: <input type="email" name="email"></label><br>
+        <button type="submit">변경</button>
+    </form>
+
+    <!-- CSRF 토큰 없는 권한 설정 폼 -->
+    <form method="POST" action="/update-permissions">
+        <h2>권한 설정</h2>
+        <label><input type="checkbox" name="is_admin"> 관리자 권한</label><br>
+        <label><input type="checkbox" name="can_edit"> 편집 권한</label><br>
+        <label><input type="checkbox" name="can_delete"> 삭제 권한</label><br>
+        <button type="submit">저장</button>
+    </form>
+
+    <!-- GET 요청으로 상태 변경 (더 취약함) -->
+    <div class="actions">
+        <h2>빠른 작업 (GET 요청)</h2>
+        <a href="/logout">로그아웃</a><br>
+        <a href="/delete-item?id=123">항목 삭제</a><br>
+        <a href="/approve?request_id=456">요청 승인</a><br>
+        <a href="/make-admin?user_id=789">관리자 권한 부여</a><br>
+    </div>
+
+    <!-- AJAX 요청도 CSRF 토큰 없음 -->
+    <script>
+        function deletePost(id) {
+            fetch('/api/posts/' + id, {
+                method: 'DELETE',
+                // CSRF 토큰 없음
+            });
+        }
+
+        function updateProfile() {
+            fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: document.getElementById('name').value,
+                    bio: document.getElementById('bio').value
+                })
+                // CSRF 토큰 없음
+            });
+        }
+    </script>
+
+    <!-- 프로필 업데이트 (AJAX) -->
+    <div>
+        <h2>프로필 업데이트</h2>
+        <input type="text" id="name" placeholder="이름">
+        <textarea id="bio" placeholder="소개"></textarea>
+        <button onclick="updateProfile()">업데이트</button>
+    </div>
+
+    <!-- 자동 제출 폼 (공격 시뮬레이션) -->
+    <form id="auto-submit-form" method="POST" action="/transfer" style="display: none;">
+        <input type="hidden" name="to_account" value="attacker_account">
+        <input type="hidden" name="amount" value="1000000">
+    </form>
+</body>
+</html>

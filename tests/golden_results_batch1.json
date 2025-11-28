@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "created_at": "2025-11-28T10:52:44.598496",
+    "urls": [
+      "https://www.example.com"
+    ],
+    "scanner_count": 55
+  },
+  "results": {
+    "https://www.example.com": {
+      "error": "NOT NULL constraint failed: scanner_scanrequest.ip_address",
+      "status": "failed"
+    }
+  }
+}

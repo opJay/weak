@@ -411,3 +411,32 @@ if config('USE_X_FORWARDED_HOST', default=False, cast=bool):
     USE_X_FORWARDED_HOST = True
     USE_X_FORWARDED_PORT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# ==============================================================================
+# 서버 시작 시 Redis 초기화
+# ==============================================================================
+
+def initialize_redis_on_startup():
+    """서버 시작 시 Redis의 실행 중인 스캔 목록 초기화"""
+    try:
+        import redis
+        redis_url = config('REDIS_URL', default='redis://127.0.0.1:6379/0')
+        redis_client = redis.Redis.from_url(redis_url)
+
+        # Redis 연결 확인
+        redis_client.ping()
+
+        # 실행 중인 스캔 목록 초기화
+        deleted_count = redis_client.delete('weak:running_scans')
+
+        if deleted_count:
+            print(f"✅ Redis 실행 중인 스캔 목록 초기화 완료 (기존 {deleted_count}개 항목 제거)")
+        else:
+            print("✅ Redis 실행 중인 스캔 목록이 이미 비어있음")
+
+    except Exception as e:
+        print(f"⚠️  Redis 초기화 실패 (Redis가 실행 중이 아닐 수 있음): {e}")
+        # Redis 실패해도 서버는 정상 시작
+
+# 서버 시작 시 실행
+initialize_redis_on_startup()

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'strict-dynamic'; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+    <title>Secure Headers Test Page</title>
+</head>
+<body>
+    <h1>보안 헤더가 적용된 안전한 페이지</h1>
+
+    <p>이 페이지는 다음 보안 헤더들이 적용되어 있습니다:</p>
+    <ul>
+        <li>Strict-Transport-Security (HSTS)</li>
+        <li>X-Content-Type-Options</li>
+        <li>X-Frame-Options</li>
+        <li>Content-Security-Policy (CSP)</li>
+        <li>X-XSS-Protection</li>
+        <li>Referrer-Policy</li>
+        <li>Permissions-Policy</li>
+    </ul>
+
+    <p>이러한 헤더들은 다양한 웹 공격으로부터 사용자를 보호합니다.</p>
+</body>
+</html>

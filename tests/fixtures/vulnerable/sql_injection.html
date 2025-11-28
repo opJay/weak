@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SQL Injection Vulnerable Test Page</title>
+</head>
+<body>
+    <h1>SQL Injection 취약점 테스트 페이지</h1>
+
+    <!-- 검색 폼 -->
+    <form action="/search" method="GET">
+        <h2>제품 검색</h2>
+        <input type="text" name="id" placeholder="제품 ID" value="1">
+        <input type="text" name="category" placeholder="카테고리" value="electronics">
+        <input type="text" name="search" placeholder="검색어" value="laptop">
+        <button type="submit">검색</button>
+    </form>
+
+    <!-- 로그인 폼 -->
+    <form action="/login" method="POST">
+        <h2>로그인</h2>
+        <input type="text" name="username" placeholder="사용자명" value="admin">
+        <input type="password" name="password" placeholder="비밀번호" value="password">
+        <button type="submit">로그인</button>
+    </form>
+
+    <!-- SQL 에러 메시지 노출 -->
+    <div class="error-message">
+        <h3>오류 발생</h3>
+        <pre>
+Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''1'' at line 1
+
+Query: SELECT * FROM products WHERE id = '1'' AND category = 'electronics'
+
+Stack trace:
+  at Database.query (database.js:42)
+  at ProductController.search (products.js:156)
+  at Router.handle (router.js:89)
+        </pre>
+    </div>
+
+    <!-- 정렬 파라미터 -->
+    <div class="sort-options">
+        <h3>정렬 옵션</h3>
+        <a href="?sort=name">이름순</a>
+        <a href="?sort=price">가격순</a>
+        <a href="?order=ASC">오름차순</a>
+        <a href="?order=DESC">내림차순</a>
+    </div>
+
+    <!-- 필터 파라미터 -->
+    <form action="/filter" method="GET">
+        <h3>필터</h3>
+        <select name="filter">
+            <option value="active">활성</option>
+            <option value="inactive">비활성</option>
+        </select>
+        <input type="number" name="limit" value="10" placeholder="결과 수">
+        <input type="number" name="offset" value="0" placeholder="오프셋">
+        <button type="submit">적용</button>
+    </form>
+
+    <!-- 사용자 프로필 조회 -->
+    <div class="user-lookup">
+        <h3>사용자 조회</h3>
+        <form action="/user" method="GET">
+            <input type="text" name="user_id" placeholder="사용자 ID">
+            <button type="submit">조회</button>
+        </form>
+    </div>
+
+    <!-- 댓글 폼 (Second-order SQL Injection) -->
+    <form action="/comment" method="POST">
+        <h3>댓글 작성</h3>
+        <input type="text" name="author" placeholder="작성자">
+        <textarea name="content" placeholder="내용"></textarea>
+        <button type="submit">작성</button>
+    </form>
+
+    <!-- 데이터베이스 정보 노출 -->
+    <div class="debug-info" style="display: none;">
+        <!-- 실제로는 숨겨져 있지만 소스에서 볼 수 있음 -->
+        <!-- Database: MySQL 5.7.32 -->
+        <!-- Tables: users, products, orders, sessions -->
+        <!-- Connection: mysql://root:password@localhost:3306/shop -->
+    </div>
+</body>
+</html>

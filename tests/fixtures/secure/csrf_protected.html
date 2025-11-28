@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF Protected Test Page</title>
+</head>
+<body>
+    <h1>CSRF 보호가 적용된 안전한 페이지</h1>
+
+    <!-- CSRF 토큰이 있는 송금 폼 -->
+    <form method="POST" action="/transfer">
+        <h2>송금</h2>
+        <input type="hidden" name="csrf_token" value="a1b2c3d4e5f6g7h8i9j0">
+        <label>받는 계좌: <input type="text" name="to_account" value="123456789"></label><br>
+        <label>금액: <input type="number" name="amount" value="10000"></label><br>
+        <label>메모: <input type="text" name="memo"></label><br>
+        <button type="submit">송금하기</button>
+    </form>
+
+    <!-- CSRF 토큰이 있는 비밀번호 변경 폼 -->
+    <form method="POST" action="/change-password">
+        <h2>비밀번호 변경</h2>
+        <input type="hidden" name="_csrf" value="xyz789abc123def456">
+        <label>현재 비밀번호: <input type="password" name="current_password" required></label><br>
+        <label>새 비밀번호: <input type="password" name="new_password" required></label><br>
+        <label>비밀번호 확인: <input type="password" name="confirm_password" required></label><br>
+        <button type="submit">변경</button>
+    </form>
+
+    <!-- Django 스타일 CSRF 토큰 -->
+    <form method="POST" action="/update-profile">
+        <h2>프로필 업데이트</h2>
+        <input type="hidden" name="csrfmiddlewaretoken" value="KbyVmdhTgD8wxFW3QqQoFCRpcRPQ8xqZ">
+        <label>이름: <input type="text" name="name"></label><br>
+        <label>이메일: <input type="email" name="email"></label><br>
+        <button type="submit">저장</button>
+    </form>
+
+    <!-- 더블 서브밋 쿠키 패턴 -->
+    <form method="POST" action="/delete-item">
+        <h2>항목 삭제</h2>
+        <input type="hidden" name="csrf_token" value="token_from_cookie_123">
+        <input type="hidden" name="item_id" value="456">
+        <button type="submit">삭제</button>
+    </form>
+
+    <!-- AJAX 요청에 CSRF 토큰 포함 -->
+    <script>
+        // 메타 태그에서 CSRF 토큰 읽기
+        const csrfToken = 'secure_token_xyz789';
+
+        function updateProfileSecure() {
+            fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken  // CSRF 토큰 헤더
+                },
+                body: JSON.stringify({
+                    name: document.getElementById('name').value,
+                    bio: document.getElementById('bio').value
+                })
+            });
+        }
+
+        // jQuery 스타일
+        $.ajax({
+            url: '/api/data',
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            data: {
+                // 데이터
+            }
+        });
+    </script>
+
+    <!-- 상태 변경은 POST 요청으로만 -->
+    <form method="POST" action="/logout">
+        <input type="hidden" name="authenticity_token" value="rails_style_token_abc123">
+        <button type="submit">로그아웃</button>
+    </form>
+
+    <!-- 민감한 작업에 재인증 요구 -->
+    <form method="POST" action="/delete-account">
+        <h2>계정 삭제</h2>
+        <input type="hidden" name="csrf_token" value="critical_action_token_999">
+        <label>비밀번호 확인: <input type="password" name="password" required></label><br>
+        <label>확인 문구 입력 (DELETE): <input type="text" name="confirmation" pattern="DELETE" required></label><br>
+        <button type="submit" style="color: red;">계정 삭제</button>
+    </form>
+
+    <!-- SameSite 쿠키 속성 설명 -->
+    <div class="info">
+        <h3>추가 보호</h3>
+        <p>이 사이트는 CSRF 토큰 외에도 다음 보호 기능을 사용합니다:</p>
+        <ul>
+            <li>SameSite=Strict 쿠키 속성</li>
+            <li>Origin/Referer 헤더 검증</li>
+            <li>커스텀 요청 헤더 검증</li>
+            <li>민감한 작업에 대한 재인증</li>
+        </ul>
+    </div>
+</body>
+</html>

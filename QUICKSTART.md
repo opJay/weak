@@ -237,7 +237,37 @@ uv run python manage.py createsuperuser
 - 무단으로 타인의 웹사이트를 스캔하는 것은 불법입니다
 - 사용자는 모든 법적 책임을 집니다
 
-## 11. 다음 단계
+## 11. 테스트 실행
+
+### 단위 테스트
+
+```bash
+# pytest 설치 (처음 한 번만)
+uv add --dev pytest pytest-django pytest-cov
+
+# 모든 테스트 실행
+pytest
+
+# 특정 테스트 파일 실행
+pytest tests/unit/test_batch2_scanners.py
+
+# 코드 커버리지와 함께
+pytest --cov=scanner --cov-report=html
+```
+
+### Golden Test (회귀 테스트)
+
+```bash
+# Golden Test 생성
+uv run python manage.py generate_golden_tests
+
+# Golden Test 검증
+uv run python manage.py verify_golden_tests
+```
+
+자세한 테스트 가이드는 [TESTING.md](TESTING.md)를 참고하세요.
+
+## 12. 다음 단계
 
 ### 완료된 기능 ✅
 - [x] **OWASP Top 10 2025 RC1 완전 대응 (50개 보안 스캐너, ~95% 커버리지)**

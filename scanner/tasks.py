@@ -316,7 +316,7 @@ def scan_security(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
 
-        from .scanners import SecurityHeaderScanner
+        from .scanners_compat import SecurityHeaderScanner
         header_scanner = SecurityHeaderScanner(response.headers)
         header_results = header_scanner.scan()
         security_result.security_headers = header_results['headers']
@@ -344,7 +344,7 @@ def scan_security(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
 
-        from .scanners import XSSScanner
+        from .scanners_compat import XSSScanner
         xss_scanner = XSSScanner(scan_request.url)
         xss_results = xss_scanner.scan()
         security_result.xss_vulnerabilities = {
@@ -375,7 +375,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import SQLInjectionScanner
+        from .scanners_compat import SQLInjectionScanner
         sqli_scanner = SQLInjectionScanner(scan_request.url)
         sqli_results = sqli_scanner.scan()
         security_result.sql_injection = {
@@ -404,7 +404,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import CORSScanner
+        from .scanners_compat import CORSScanner
         cors_scanner = CORSScanner(scan_request.url, response.headers)
         cors_results = cors_scanner.scan()
         security_result.cors_misconfiguration = cors_results
@@ -428,7 +428,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import CookieScanner
+        from .scanners_compat import CookieScanner
         cookie_scanner = CookieScanner(response)
         cookie_results = cookie_scanner.scan()
         security_result.sensitive_data_exposure = cookie_results
@@ -453,7 +453,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import CSRFScanner
+        from .scanners_compat import CSRFScanner
         csrf_scanner = CSRFScanner(scan_request.url)
         csrf_results = csrf_scanner.scan()
         security_result.csrf_protection = csrf_results
@@ -476,7 +476,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import ClickjackingScanner
+        from .scanners_compat import ClickjackingScanner
         clickjacking_scanner = ClickjackingScanner(response.headers, response.text)
         clickjacking_results = clickjacking_scanner.scan()
         security_result.clickjacking = clickjacking_results
@@ -499,7 +499,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import InformationDisclosureScanner
+        from .scanners_compat import InformationDisclosureScanner
         info_scanner = InformationDisclosureScanner(response)
         info_results = info_scanner.scan()
         security_result.insufficient_logging = info_results
@@ -523,7 +523,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import HTTPMethodScanner
+        from .scanners_compat import HTTPMethodScanner
         method_scanner = HTTPMethodScanner(scan_request.url)
         method_results = method_scanner.scan()
         if meta := collect_scanner_metadata(HTTPMethodScanner, method_results):
@@ -545,7 +545,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import SensitiveFileScanner
+        from .scanners_compat import SensitiveFileScanner
         file_scanner = SensitiveFileScanner(scan_request.url)
         file_results = file_scanner.scan()
         if meta := collect_scanner_metadata(SensitiveFileScanner, file_results):
@@ -568,7 +568,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import MixedContentScanner
+        from .scanners_compat import MixedContentScanner
         mixed_scanner = MixedContentScanner(scan_request.url, response.text)
         mixed_results = mixed_scanner.scan()
         if meta := collect_scanner_metadata(MixedContentScanner, mixed_results):
@@ -590,7 +590,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import SubresourceIntegrityScanner
+        from .scanners_compat import SubresourceIntegrityScanner
         sri_scanner = SubresourceIntegrityScanner(response.text)
         sri_results = sri_scanner.scan()
         if meta := collect_scanner_metadata(SubresourceIntegrityScanner, sri_results):
@@ -612,7 +612,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import DirectoryListingScanner
+        from .scanners_compat import DirectoryListingScanner
         listing_scanner = DirectoryListingScanner(scan_request.url)
         listing_results = listing_scanner.scan()
         if meta := collect_scanner_metadata(DirectoryListingScanner, listing_results):
@@ -634,7 +634,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners import OpenRedirectScanner
+        from .scanners_compat import OpenRedirectScanner
         redirect_scanner = OpenRedirectScanner(scan_request.url)
         redirect_results = redirect_scanner.scan()
         security_result.open_redirects = redirect_results

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>XSS Vulnerable Test Page</title>
+</head>
+<body>
+    <h1>XSS 취약점 테스트 페이지</h1>
+
+    <!-- Reflected XSS -->
+    <div class="search-results">
+        <h2>검색 결과</h2>
+        <p>검색어: <script>alert('XSS')</script></p>
+    </div>
+
+    <!-- DOM-based XSS -->
+    <script>
+        // 안전하지 않은 DOM 조작
+        var userInput = location.hash.substring(1);
+        document.write('사용자 입력: ' + userInput);
+
+        // eval 사용
+        function processInput() {
+            var input = document.getElementById('userInput').value;
+            eval(input);
+        }
+    </script>
+
+    <!-- innerHTML 사용 -->
+    <div id="dynamic-content"></div>
+    <script>
+        document.getElementById('dynamic-content').innerHTML = '<img src=x onerror=alert(1)>';
+    </script>
+
+    <!-- 이벤트 핸들러 XSS -->
+    <input type="text" value="" onmouseover="alert('XSS')">
+    <button onclick="alert('XSS')">클릭</button>
+
+    <!-- Stored XSS 시뮬레이션 -->
+    <div class="comments">
+        <h3>댓글</h3>
+        <div class="comment">
+            <p>사용자1: <img src=x onerror=alert('Stored XSS')></p>
+        </div>
+        <div class="comment">
+            <p>사용자2: <svg onload=alert('XSS')></p>
+        </div>
+    </div>
+
+    <!-- 다양한 XSS 벡터 -->
+    <a href="javascript:alert('XSS')">링크</a>
+    <iframe src="javascript:alert('XSS')"></iframe>
+    <object data="javascript:alert('XSS')"></object>
+    <embed src="javascript:alert('XSS')">
+
+    <!-- 폼 입력 필드 -->
+    <form>
+        <input type="text" id="userInput" value="alert('XSS')">
+        <button type="button" onclick="processInput()">실행</button>
+    </form>
+</body>
+</html>
