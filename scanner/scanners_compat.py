@@ -947,3 +947,152 @@ class BusinessLogicAnomalyScanner:
     def scan(self) -> Dict[str, Any]:
         return self.scanner.scan()
 
+
+# ============================================
+# Batch 8: Supply Chain Security Scanners
+# ============================================
+
+class SoftwareSupplyChainScanner:
+    """SoftwareSupplyChainScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'supply_chain',
+        'name': 'Software Supply Chain',
+        'icon': '📦',
+        'description': '소프트웨어 공급망 보안 검사 (종속성 노출, SRI, 취약한 라이브러리)',
+        'weight': 2,
+        'field': 'supply_chain_vulnerabilities'
+    }
+
+    def __init__(self, url, html_content=None):
+        self.url = url
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch8 import SoftwareSupplyChainScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_supply_chain import SoftwareSupplyChainScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class PackageIntegrityScanner:
+    """PackageIntegrityScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'package_integrity',
+        'name': '패키지 무결성 검증',
+        'icon': '🔐',
+        'description': '패키지 무결성 검증 (lockfile 해시, SHA-512 검증, 무결성 누락)',
+        'weight': 1,
+        'field': 'package_integrity_vulnerabilities'
+    }
+
+    def __init__(self, url, html_content=None):
+        self.url = url
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch8 import PackageIntegrityScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_supply_chain_advanced import PackageIntegrityScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class TyposquattingScanner:
+    """TyposquattingScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'typosquatting',
+        'name': '타이포스쿼팅 탐지',
+        'icon': '🎭',
+        'description': '타이포스쿼팅 탐지 (유사 패키지명, 블랙리스트, 의심스러운 패턴)',
+        'weight': 1,
+        'field': 'typosquatting_vulnerabilities'
+    }
+
+    def __init__(self, url, html_content=None):
+        self.url = url
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch8 import TyposquattingScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_supply_chain_advanced import TyposquattingScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class OutdatedDependencyScanner:
+    """OutdatedDependencyScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'outdated_dependencies',
+        'name': '오래된 종속성 검사',
+        'icon': '📅',
+        'description': '오래된 종속성 검사 (CVE 패턴 매칭, EOL 패키지, 최소 안전 버전)',
+        'weight': 1,
+        'field': 'outdated_dependency_vulnerabilities'
+    }
+
+    def __init__(self, url, html_content=None):
+        self.url = url
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch8 import OutdatedDependencyScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_supply_chain_advanced import OutdatedDependencyScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class LicenseComplianceScanner:
+    """LicenseComplianceScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'license_compliance',
+        'name': '라이선스 준수 검사',
+        'icon': '⚖️',
+        'description': '라이선스 준수 검사 (GPL/AGPL 검출, 비상업적 라이선스, 라이선스 누락)',
+        'weight': 1,
+        'field': 'license_compliance_vulnerabilities'
+    }
+
+    def __init__(self, url, html_content=None):
+        self.url = url
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch8 import LicenseComplianceScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_supply_chain_advanced import LicenseComplianceScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
