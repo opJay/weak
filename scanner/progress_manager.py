@@ -78,20 +78,62 @@ class ProgressManager:
         ]
     }
 
-    def __init__(self, scan_types=None):
+    def __init__(self, scan_types=None, use_db_config=True):
         """
         초기화
 
         Args:
             scan_types: 실행할 스캔 타입 리스트 ['security', 'standards', 'accessibility']
+            use_db_config: DB에서 스캐너 설정을 로드할지 여부
         """
         if scan_types is None:
             scan_types = ['security', 'standards', 'accessibility']
+
+        # DB에서 활성화된 스캐너 로드 (옵션)
+        if use_db_config:
+            self.SCANNERS = self._load_scanners_from_db()
 
         # 유효한 스캔 타입만 필터링
         self.scan_types = [st for st in scan_types if st in self.SCANNERS]
         self.progress_map = self._calculate_progress_map()
         self.current_indices = {st: -1 for st in self.scan_types}
+
+    def _load_scanners_from_db(self):
+        """
+        DB에서 활성화된 스캐너 설정을 로드
+
+        Returns:
+            딕셔너리 {'security': [...], 'standards': [...], 'accessibility': [...]}
+        """
+        try:
+            from .models import ScannerConfiguration
+
+            scanners = {
+                'security': [],
+                'standards': [],
+                'accessibility': []
+            }
+
+            # DB에서 활성화된 스캐너만 조회
+            configs = ScannerConfiguration.objects.filter(
+                enabled=True
+            ).order_by('category', 'display_order', 'scanner_id')
+
+            for config in configs:
+                if config.category in scanners:
+                    scanners[config.category].append((config.name, config.weight))
+
+            # DB에서 로드한 스캐너가 있으면 반환, 없으면 기본값 사용
+            if any(scanners.values()):
+                return scanners
+            else:
+                # DB가 비어있거나 접근 불가능한 경우 기본값 사용
+                return self.SCANNERS
+
+        except Exception as e:
+            # DB 오류 시 기본값 사용
+            print(f"DB에서 스캐너 설정을 로드할 수 없습니다: {e}")
+            return self.SCANNERS
 
     def _calculate_progress_map(self):
         """각 스캐너별 진행률 맵 계산"""

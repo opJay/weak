@@ -16,7 +16,8 @@ from .models import (
     SecurityScanResult,
     WebStandardsResult,
     AccessibilityResult,
-    Vulnerability
+    Vulnerability,
+    ScannerConfiguration
 )
 from .standards_checker import (
     check_seo_advanced,
@@ -285,6 +286,16 @@ def scan_security(scan_request_id):
     try:
         scan_request = ScanRequest.objects.get(id=scan_request_id)
 
+        # 활성화된 스캐너 설정 로드
+        scanner_configs = {
+            config.scanner_id: config
+            for config in ScannerConfiguration.objects.filter(
+                category='security',
+                enabled=True
+            )
+        }
+        logger.info(f'Loaded {len(scanner_configs)} active security scanners')
+
         # ProgressManager 초기화
         from .progress_manager import ProgressManager
         pm = ProgressManager(['security'])  # security만 실행하므로 0-100% 전체 사용
@@ -316,14 +327,19 @@ def scan_security(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
 
-        from .scanners_compat import SecurityHeaderScanner
-        header_scanner = SecurityHeaderScanner(response.headers)
-        header_results = header_scanner.scan()
-        security_result.security_headers = header_results['headers']
+        # 스캐너 활성화 확인
+        if 'security_headers' in scanner_configs:
+            from .scanners_compat import SecurityHeaderScanner
+            header_scanner = SecurityHeaderScanner(response.headers)
+            header_results = header_scanner.scan()
+            security_result.security_headers = header_results['headers']
 
-        # 메타데이터 수집
-        if meta := collect_scanner_metadata(SecurityHeaderScanner, header_results):
-            scanner_metadata.append(meta)
+            # 메타데이터 수집
+            if meta := collect_scanner_metadata(SecurityHeaderScanner, header_results):
+                scanner_metadata.append(meta)
+        else:
+            logger.info('SecurityHeaderScanner is disabled, skipping...')
+            security_result.security_headers = {'skipped': True, 'reason': 'Scanner disabled'}
 
         # 2. SSL/TLS 검사
         progress, name = pm.next_progress('security')
@@ -331,12 +347,17 @@ def scan_security(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
 
-        ssl_result = check_ssl_tls(scan_request.url)
-        security_result.ssl_tls_result = ssl_result
+        # 스캐너 활성화 확인
+        if 'ssl_tls' in scanner_configs:
+            ssl_result = check_ssl_tls(scan_request.url)
+            security_result.ssl_tls_result = ssl_result
 
-        # 메타데이터 수집
-        if meta := collect_scanner_metadata(check_ssl_tls, ssl_result):
-            scanner_metadata.append(meta)
+            # 메타데이터 수집
+            if meta := collect_scanner_metadata(check_ssl_tls, ssl_result):
+                scanner_metadata.append(meta)
+        else:
+            logger.info('SSL/TLS Scanner is disabled, skipping...')
+            security_result.ssl_tls_result = {'skipped': True, 'reason': 'Scanner disabled'}
 
         # 3. XSS 취약점 스캔
         progress, name = pm.next_progress('security')
@@ -344,60 +365,71 @@ def scan_security(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
 
-        from .scanners_compat import XSSScanner
-        xss_scanner = XSSScanner(scan_request.url)
-        xss_results = xss_scanner.scan()
-        security_result.xss_vulnerabilities = {
-            'total': xss_results['total'],
-            'has_xss': xss_results['has_xss'],
-            'vulnerabilities': xss_results['vulnerabilities']
-        }
+        # 스캐너 활성화 확인
+        if 'xss_vulnerabilities' in scanner_configs:
+            from .scanners_compat import XSSScanner
+            xss_scanner = XSSScanner(scan_request.url)
+            xss_results = xss_scanner.scan()
+            security_result.xss_vulnerabilities = {
+                'total': xss_results['total'],
+                'has_xss': xss_results['has_xss'],
+                'vulnerabilities': xss_results['vulnerabilities']
+            }
 
-        # 메타데이터 수집
-        if meta := collect_scanner_metadata(XSSScanner, xss_results):
-            scanner_metadata.append(meta)
+            # 메타데이터 수집
+            if meta := collect_scanner_metadata(XSSScanner, xss_results):
+                scanner_metadata.append(meta)
 
-        # XSS 취약점을 Vulnerability 모델에 저장
-        for vuln in xss_results['vulnerabilities'][:5]:  # 최대 5개
-            Vulnerability.objects.create(
-                scan_request=scan_request,
-                category='xss',
-                vulnerability_type='cross_site_scripting',
-                severity=vuln.get('severity', 'medium'),
-                title=vuln.get('type', 'XSS Vulnerability'),
-                description=vuln.get('description', ''),
-                recommendation=vuln.get('recommendation', ''),
-                evidence=str(vuln)
-            )
+            # XSS 취약점을 Vulnerability 모델에 저장
+            for vuln in xss_results['vulnerabilities'][:5]:  # 최대 5개
+                Vulnerability.objects.create(
+                    scan_request=scan_request,
+                    category='xss',
+                    vulnerability_type='cross_site_scripting',
+                    severity=vuln.get('severity', 'medium'),
+                    title=vuln.get('type', 'XSS Vulnerability'),
+                    description=vuln.get('description', ''),
+                    recommendation=vuln.get('recommendation', ''),
+                    evidence=str(vuln)
+                )
+        else:
+            logger.info('XSS Scanner is disabled, skipping...')
+            security_result.xss_vulnerabilities = {'skipped': True, 'reason': 'Scanner disabled'}
 
         # 4. SQL Injection 스캔
         progress, name = pm.next_progress('security')
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import SQLInjectionScanner
-        sqli_scanner = SQLInjectionScanner(scan_request.url)
-        sqli_results = sqli_scanner.scan()
-        security_result.sql_injection = {
-            'total': sqli_results['total'],
-            'has_sqli': sqli_results['has_sqli'],
-            'vulnerabilities': sqli_results['vulnerabilities']
-        }
-        if meta := collect_scanner_metadata(SQLInjectionScanner, sqli_results):
-            scanner_metadata.append(meta)
 
-        # SQL Injection 취약점을 Vulnerability 모델에 저장
-        for vuln in sqli_results['vulnerabilities'][:5]:  # 최대 5개
-            Vulnerability.objects.create(
-                scan_request=scan_request,
-                category='injection',
-                vulnerability_type='sql_injection',
+        # 스캐너 활성화 확인
+        if 'sql_injection' in scanner_configs:
+            from .scanners_compat import SQLInjectionScanner
+            sqli_scanner = SQLInjectionScanner(scan_request.url)
+            sqli_results = sqli_scanner.scan()
+            security_result.sql_injection = {
+                'total': sqli_results['total'],
+                'has_sqli': sqli_results['has_sqli'],
+                'vulnerabilities': sqli_results['vulnerabilities']
+            }
+            if meta := collect_scanner_metadata(SQLInjectionScanner, sqli_results):
+                scanner_metadata.append(meta)
+
+            # SQL Injection 취약점을 Vulnerability 모델에 저장
+            for vuln in sqli_results['vulnerabilities'][:5]:  # 최대 5개
+                Vulnerability.objects.create(
+                    scan_request=scan_request,
+                    category='injection',
+                    vulnerability_type='sql_injection',
                 severity=vuln.get('severity', 'critical'),
                 title=vuln.get('type', 'SQL Injection'),
                 description=vuln.get('description', ''),
                 recommendation=vuln.get('recommendation', ''),
                 evidence=str(vuln)
             )
+        else:
+            logger.info('SQL Injection Scanner is disabled, skipping...')
+            security_result.sql_injection = {'skipped': True, 'reason': 'Scanner disabled'}
 
         # 5. CORS 설정 검사
         progress, name = pm.next_progress('security')

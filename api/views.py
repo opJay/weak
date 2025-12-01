@@ -50,6 +50,72 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ScanRequestSerializer
     permission_classes = [AllowAny]
 
+    def _get_field_name_for_scanner(self, scanner_id):
+        """
+        scanner_id를 SecurityScanResult의 필드명으로 매핑
+
+        Args:
+            scanner_id: 스캐너 설정의 ID
+
+        Returns:
+            데이터베이스 필드명 또는 None
+        """
+        # scanner_id와 DB 필드명 매핑
+        field_mapping = {
+            'security_headers': 'security_headers',
+            'ssl_tls': 'ssl_tls_result',
+            'xss_vulnerabilities': 'xss_vulnerabilities',
+            'sql_injection': 'sql_injection',
+            'cors_misconfiguration': 'cors_misconfiguration',
+            'cookie_security': 'cookie_security',
+            'csrf_protection': 'csrf_protection',
+            'clickjacking': 'clickjacking',
+            'information_disclosure': 'sensitive_data_exposure',
+            'http_methods': 'http_methods',
+            'sensitive_files': 'sensitive_files',
+            'mixed_content': 'mixed_content',
+            'subresource_integrity': 'subresource_integrity',
+            'directory_listing': 'directory_listing',
+            'open_redirect': 'open_redirects',
+            'ssrf_vulnerabilities': 'ssrf_vulnerabilities',
+            'xxe_vulnerabilities': 'xxe_vulnerabilities',
+            'command_injection': 'command_injection',
+            'deserialization': 'deserialization',
+            'file_upload': 'file_upload',
+            'path_traversal': 'path_traversal',
+            'jwt_vulnerabilities': 'jwt_vulnerabilities',
+            'template_injection': 'template_injection',
+            'nosql_injection': 'nosql_injection',
+            'ssl_tls_deep': 'ssl_tls_vulnerabilities',
+            'rest_api_security': 'rest_api_vulnerabilities',
+            'graphql_security': 'graphql_vulnerabilities',
+            'oauth_security': 'oauth_vulnerabilities',
+            'session_security': 'session_vulnerabilities',
+            'password_policy': 'password_policy',
+            'rate_limiting': 'rate_limiting',
+            'ldap_injection': 'ldap_injection',
+            'authorization': 'authorization_vulnerabilities',
+            'supply_chain': 'supply_chain_vulnerabilities',
+            'exception_handling': 'exception_handling_vulnerabilities',
+            'price_manipulation': 'price_manipulation_vulnerabilities',
+            'race_condition': 'race_condition_vulnerabilities',
+            'workflow_bypass': 'workflow_bypass_vulnerabilities',
+            'account_enumeration': 'account_enumeration_vulnerabilities',
+            'resource_exhaustion': 'resource_exhaustion_vulnerabilities',
+            'logging_monitoring': 'logging_monitoring_vulnerabilities',
+            'business_logic_anomaly': 'business_logic_anomaly_vulnerabilities',
+            'package_integrity': 'package_integrity_vulnerabilities',
+            'typosquatting': 'typosquatting_vulnerabilities',
+            'outdated_dependencies': 'outdated_dependency_vulnerabilities',
+            'license_compliance': 'license_compliance_vulnerabilities',
+            'jwt_advanced': 'jwt_advanced_vulnerabilities',
+            'serialization_integrity': 'serialization_integrity_vulnerabilities',
+            'api_integrity': 'api_integrity_vulnerabilities',
+            'checksum_validation': 'checksum_validation_vulnerabilities'
+        }
+
+        return field_mapping.get(scanner_id)
+
     @action(detail=False, methods=['post'], url_path='start')
     def start_scan(self, request):
         """
@@ -271,7 +337,43 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             security_result = scan_request.security_result
             serializer = SecurityScanResultSerializer(security_result)
-            return Response(serializer.data)
+            data = serializer.data
+
+            # ScannerConfiguration에 따른 결과 필터링
+            from scanner.models import ScannerConfiguration
+            display_configs = ScannerConfiguration.objects.filter(
+                category='security'
+            ).order_by('display_order', 'scanner_id')
+
+            filtered_data = data.copy()
+
+            # 각 스캐너별로 표시 설정 적용
+            for config in display_configs:
+                field_name = self._get_field_name_for_scanner(config.scanner_id)
+
+                if field_name and field_name in data:
+                    # 결과 표시 여부 확인
+                    if not config.show_in_results:
+                        # 숨김 처리
+                        filtered_data.pop(field_name, None)
+                    elif field_name in filtered_data:
+                        result = filtered_data[field_name]
+
+                        # 결과가 dict이고 status가 있는 경우
+                        if isinstance(result, dict) and 'status' in result:
+                            # 통과/실패별 표시 설정 적용
+                            if result['status'] == 'pass' and not config.show_if_passed:
+                                filtered_data.pop(field_name, None)
+                            elif result['status'] == 'fail' and not config.show_if_failed:
+                                filtered_data.pop(field_name, None)
+                            elif not config.show_details and field_name in filtered_data:
+                                # 상세 정보 숨기기
+                                filtered_data[field_name] = {
+                                    'status': result.get('status'),
+                                    'message': config.custom_pass_message if result.get('status') == 'pass' else config.custom_fail_message
+                                }
+
+            return Response(filtered_data)
         except SecurityScanResult.DoesNotExist:
             return Response({
                 'error': 'Security scan results not found'

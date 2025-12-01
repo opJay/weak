@@ -372,3 +372,176 @@ class Vulnerability(models.Model):
 
     def __str__(self):
         return f"[{self.get_severity_display()}] {self.title}"
+
+
+class ScannerConfiguration(models.Model):
+    """스캐너 설정 및 표시 제어 모델"""
+
+    CATEGORY_CHOICES = [
+        ('security', '보안'),
+        ('standards', '웹 표준'),
+        ('accessibility', '접근성'),
+    ]
+
+    # 식별자
+    scanner_id = models.CharField(
+        max_length=100,
+        unique=True,
+        primary_key=True,
+        verbose_name='스캐너 ID',
+        help_text='스캐너 클래스의 metadata["id"] 값'
+    )
+    name = models.CharField(max_length=200, verbose_name='스캐너 이름')
+    category = models.CharField(
+        max_length=50,
+        choices=CATEGORY_CHOICES,
+        verbose_name='카테고리'
+    )
+    icon = models.CharField(max_length=10, default='🔍', verbose_name='아이콘')
+    description = models.TextField(blank=True, verbose_name='설명')
+
+    # 실행 제어
+    enabled = models.BooleanField(
+        default=True,
+        verbose_name='활성화',
+        help_text='스캔 시 이 스캐너를 실행할지 여부'
+    )
+    timeout = models.IntegerField(
+        default=30,
+        verbose_name='타임아웃(초)',
+        help_text='스캐너 실행 시간 제한'
+    )
+    weight = models.FloatField(
+        default=1.0,
+        verbose_name='가중치',
+        help_text='진행률 계산 시 가중치'
+    )
+
+    # 결과 표시 제어
+    show_in_results = models.BooleanField(
+        default=True,
+        verbose_name='결과 표시',
+        help_text='스캔 결과 페이지에 이 스캐너 결과를 표시할지 여부'
+    )
+    show_details = models.BooleanField(
+        default=True,
+        verbose_name='상세 정보 표시',
+        help_text='결과의 상세 정보를 표시할지 여부'
+    )
+    show_if_passed = models.BooleanField(
+        default=True,
+        verbose_name='통과 시 표시',
+        help_text='테스트를 통과했을 때도 표시할지 여부'
+    )
+    show_if_failed = models.BooleanField(
+        default=True,
+        verbose_name='실패 시 표시',
+        help_text='테스트를 실패했을 때 표시할지 여부'
+    )
+
+    # 표시 순서
+    display_order = models.IntegerField(
+        default=0,
+        verbose_name='표시 순서',
+        help_text='결과 페이지에서의 표시 순서 (낮을수록 먼저 표시)'
+    )
+
+    # 커스텀 메시지 (선택적)
+    custom_pass_message = models.TextField(
+        blank=True,
+        verbose_name='통과 커스텀 메시지',
+        help_text='테스트 통과 시 표시할 커스텀 메시지 (선택사항)'
+    )
+    custom_fail_message = models.TextField(
+        blank=True,
+        verbose_name='실패 커스텀 메시지',
+        help_text='테스트 실패 시 표시할 커스텀 메시지 (선택사항)'
+    )
+
+    # 통계 (자동 업데이트)
+    total_runs = models.IntegerField(default=0, verbose_name='총 실행 횟수')
+    total_failures = models.IntegerField(default=0, verbose_name='실패 횟수')
+    avg_duration = models.FloatField(default=0.0, verbose_name='평균 실행 시간(초)')
+    last_run_at = models.DateTimeField(null=True, blank=True, verbose_name='마지막 실행 시간')
+
+    # 메타정보
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='생성 시간')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='수정 시간')
+
+    class Meta:
+        verbose_name = '스캐너 설정'
+        verbose_name_plural = '스캐너 설정'
+        ordering = ['category', 'display_order', 'scanner_id']
+        indexes = [
+            models.Index(fields=['category', 'enabled']),
+            models.Index(fields=['enabled']),
+        ]
+
+    def __str__(self):
+        status = '✅' if self.enabled else '❌'
+        return f"{status} {self.name} ({self.scanner_id})"
+
+    def success_rate(self):
+        """성공률 계산"""
+        if self.total_runs == 0:
+            return 0
+        return ((self.total_runs - self.total_failures) / self.total_runs) * 100
+
+    def update_stats(self, success, duration):
+        """통계 업데이트"""
+        self.total_runs += 1
+        if not success:
+            self.total_failures += 1
+
+        # 평균 실행 시간 업데이트 (이동 평균)
+        if self.total_runs == 1:
+            self.avg_duration = duration
+        else:
+            self.avg_duration = ((self.avg_duration * (self.total_runs - 1)) + duration) / self.total_runs
+
+        self.last_run_at = timezone.now()
+        self.save()
+
+
+class ScannerPreset(models.Model):
+    """스캐너 설정 프리셋 (선택적 기능)"""
+
+    name = models.CharField(max_length=100, unique=True, verbose_name='프리셋 이름')
+    description = models.TextField(verbose_name='설명')
+    configurations = models.JSONField(
+        default=dict,
+        verbose_name='설정',
+        help_text='scanner_id별 설정 (enabled, show_in_results 등)'
+    )
+    is_active = models.BooleanField(default=False, verbose_name='현재 활성')
+
+    # 메타정보
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='생성 시간')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='수정 시간')
+
+    class Meta:
+        verbose_name = '스캐너 프리셋'
+        verbose_name_plural = '스캐너 프리셋'
+        ordering = ['-is_active', 'name']
+
+    def __str__(self):
+        active = '✓' if self.is_active else ''
+        return f"{active} {self.name}"
+
+    def apply(self):
+        """프리셋 설정 적용"""
+        for scanner_id, settings in self.configurations.items():
+            try:
+                config = ScannerConfiguration.objects.get(scanner_id=scanner_id)
+                for key, value in settings.items():
+                    if hasattr(config, key):
+                        setattr(config, key, value)
+                config.save()
+            except ScannerConfiguration.DoesNotExist:
+                # 존재하지 않는 스캐너는 무시
+                pass
+
+        # 다른 프리셋 비활성화
+        ScannerPreset.objects.exclude(pk=self.pk).update(is_active=False)
+        self.is_active = True
+        self.save()

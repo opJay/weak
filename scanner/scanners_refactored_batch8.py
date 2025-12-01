@@ -209,7 +209,11 @@ class SoftwareSupplyChainScanner(BaseScanner):
             # AngularJS 버전 검사
             elif 'angular' in src:
                 for version, vuln_desc in self.vulnerable_cdns.get('angular', {}).items():
-                    if f'angular-{version}' in src or f'angular/{version}' in src:
+                    # 다양한 CDN 패턴 지원: angular-1.2, angular/1.2, angularjs/1.2
+                    if (f'angular-{version}' in src or
+                        f'angular/{version}' in src or
+                        f'angularjs/{version}' in src or
+                        (f'/{version}' in src and 'angular' in src.lower())):
                         self.vulnerabilities.append({
                             'type': 'vulnerable_library',
                             'library': 'AngularJS',
@@ -222,7 +226,10 @@ class SoftwareSupplyChainScanner(BaseScanner):
             # Bootstrap 버전 검사
             elif 'bootstrap' in src:
                 for version, vuln_desc in self.vulnerable_cdns.get('bootstrap', {}).items():
-                    if f'bootstrap-{version}' in src or f'bootstrap/{version}' in src:
+                    # 다양한 CDN 패턴 지원: bootstrap-3.3, bootstrap/3.3
+                    if (f'bootstrap-{version}' in src or
+                        f'bootstrap/{version}' in src or
+                        (f'/{version}' in src and 'bootstrap' in src.lower())):
                         self.vulnerabilities.append({
                             'type': 'vulnerable_library',
                             'library': 'Bootstrap',
@@ -650,6 +657,7 @@ class TyposquattingScanner(BaseScanner):
                                 'severity': 'critical',
                                 'message': f'CDN 타이포스쿼팅 의심: {package} (원본: {original})'
                             })
+                    break  # 첫 패턴 매칭 후 중단하여 중복 방지
 
     def _check_suspicious_patterns(self):
         """의심스러운 패키지명 패턴 추가 검사"""
@@ -894,13 +902,13 @@ class OutdatedDependencyScanner(BaseScanner):
         for script in scripts:
             src = script.get('src', '')
 
-            # 버전 패턴 추출
+            # 버전 패턴 추출 (npm @ 형식 포함)
             version_patterns = [
-                (r'jquery[/-](\d+\.\d+(?:\.\d+)?)', 'jquery'),
-                (r'angular[/-](\d+\.\d+(?:\.\d+)?)', 'angular'),
-                (r'react[/-](\d+\.\d+(?:\.\d+)?)', 'react'),
-                (r'vue[/-](\d+\.\d+(?:\.\d+)?)', 'vue'),
-                (r'bootstrap[/-](\d+\.\d+(?:\.\d+)?)', 'bootstrap'),
+                (r'jquery[@/-](\d+\.\d+(?:\.\d+)?)', 'jquery'),
+                (r'angular[@/-](\d+\.\d+(?:\.\d+)?)', 'angular'),
+                (r'react[@/-](\d+\.\d+(?:\.\d+)?)', 'react'),
+                (r'vue[@/-](\d+\.\d+(?:\.\d+)?)', 'vue'),
+                (r'bootstrap[@/-](\d+\.\d+(?:\.\d+)?)', 'bootstrap'),
                 (r'@(\d+\.\d+(?:\.\d+)?)', None)  # npm 스타일 버전
             ]
 
@@ -1121,6 +1129,7 @@ class LicenseComplianceScanner(BaseScanner):
                                 'severity': 'high',
                                 'message': f'상업적 사용 제한 라이선스: {restricted}'
                             })
+                            break  # 첫 매칭 후 중단하여 중복 방지
 
                     break
             except:

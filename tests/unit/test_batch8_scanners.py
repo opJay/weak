@@ -28,11 +28,24 @@ class TestSoftwareSupplyChainScanner(unittest.TestCase):
 
     def test_exposed_dependencies_with_secrets(self):
         """종속성 파일에서 민감한 정보 탐지"""
-        # package.json with API key
-        self.mock_http.get.return_value = Mock(
-            status_code=200,
-            text='{"dependencies": {}, "api_key": "sk-1234567890abcdef"}'
-        )
+        # package.json with API key (첫 번째 요청만 200, 나머지는 404)
+        responses = [
+            Mock(status_code=200, text='{"dependencies": {}, "api_key": "sk-1234567890abcdef"}'),  # package.json
+            Mock(status_code=404),  # composer.json
+            Mock(status_code=404),  # requirements.txt
+            Mock(status_code=404),  # Gemfile
+            Mock(status_code=404),  # pom.xml
+            Mock(status_code=404),  # build.gradle
+            Mock(status_code=404),  # Cargo.toml
+            Mock(status_code=404),  # go.mod
+            Mock(status_code=404),  # yarn.lock
+            Mock(status_code=404),  # package-lock.json
+            Mock(status_code=404),  # composer.lock
+            Mock(status_code=404),  # Pipfile.lock
+            Mock(status_code=404),  # poetry.lock
+            Mock(status_code=404),  # pubspec.lock
+        ]
+        self.mock_http.get.side_effect = responses
 
         result = self.scanner.scan()
         self.assertFalse(result['passed'])
@@ -161,10 +174,17 @@ class TestPackageIntegrityScanner(unittest.TestCase):
         }
         '''
 
-        self.mock_http.get.return_value = Mock(
-            status_code=200,
-            text=lockfile_content
-        )
+        # package-lock.json만 200, 나머지 lockfile들은 404
+        responses = [
+            Mock(status_code=200, text=lockfile_content),  # package-lock.json
+            Mock(status_code=404),  # yarn.lock
+            Mock(status_code=404),  # pnpm-lock.yaml
+            Mock(status_code=404),  # composer.lock
+            Mock(status_code=404),  # Pipfile.lock
+            Mock(status_code=404),  # poetry.lock
+            Mock(status_code=404),  # Gemfile.lock
+        ]
+        self.mock_http.get.side_effect = responses
 
         result = self.scanner.scan()
         self.assertFalse(result['passed'])
@@ -457,12 +477,18 @@ class TestLicenseComplianceScanner(unittest.TestCase):
     def test_copyleft_license_detection(self):
         """Copyleft 라이선스 탐지"""
         license_content = '''
-        GNU GENERAL PUBLIC LICENSE
+        GNU GENERAL PUBLIC LICENSE (GPL)
         Version 3, 29 June 2007
+
+        This program is free software under the GPLv3.
         '''
 
+        # 모든 라이선스 파일 체크에 대한 응답 제공
         self.mock_http.get.side_effect = [
             Mock(status_code=200, text=license_content),  # LICENSE
+            Mock(status_code=404),  # LICENSE.txt
+            Mock(status_code=404),  # LICENSE.md
+            Mock(status_code=404),  # COPYING
         ]
 
         result = self.scanner.scan()
