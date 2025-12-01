@@ -1096,3 +1096,166 @@ class LicenseComplianceScanner:
     def scan(self) -> Dict[str, Any]:
         return self.scanner.scan()
 
+
+# ============================================
+# Batch 9: Data Integrity Security Scanners
+# ============================================
+
+class JWTAdvancedScanner:
+    """JWTAdvancedScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'jwt_advanced',
+        'name': 'JWT 고급 보안 검증',
+        'icon': '🔑',
+        'description': 'JWT 알고리즘 혼동, kid 조작, 약한 시크릿, Claims 검증, JWK 노출',
+        'weight': 2,
+        'field': 'jwt_advanced_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch9 import JWTAdvancedScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_integrity_advanced import JWTAdvancedScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class SerializationIntegrityScanner:
+    """SerializationIntegrityScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'serialization_integrity',
+        'name': '직렬화 무결성 검증',
+        'icon': '📦',
+        'description': '서명 없는 직렬화, Pickle/PHP/Java 직렬화 탐지',
+        'weight': 1.5,
+        'field': 'serialization_integrity_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch9 import SerializationIntegrityScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_integrity_advanced import SerializationIntegrityScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class APIIntegrityScanner:
+    """APIIntegrityScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'api_integrity',
+        'name': 'API 응답 무결성 검사',
+        'icon': '🔒',
+        'description': 'X-Signature, ETag, Content-MD5, SRI',
+        'weight': 1,
+        'field': 'api_integrity_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch9 import APIIntegrityScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_integrity_advanced import APIIntegrityScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+class ChecksumValidationScanner:
+    """ChecksumValidationScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'checksum_validation',
+        'name': '체크섬 검증',
+        'icon': '✔️',
+        'description': '약한 해시 알고리즘, SHA256SUMS, MD5SUMS',
+        'weight': 1,
+        'field': 'checksum_validation_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch9 import ChecksumValidationScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_integrity_advanced import ChecksumValidationScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+
+
+# ============================================
+# Batch 10: Exception Handling Scanner
+# ============================================
+
+class ExceptionHandlingScanner:
+    """ExceptionHandlingScanner 호환성 래퍼"""
+
+    # 클래스 레벨 metadata (tasks.py에서 클래스.metadata로 접근 시 사용)
+    metadata = {
+        'id': 'exception_handling',
+        'name': 'Exception Handling 보안 검사',
+        'icon': '⚠️',
+        'description': '예외 처리 오류 및 에러 정보 노출 탐지',
+        'weight': 1.5,
+        'field': 'exception_handling_vulnerabilities'
+    }
+
+    def __init__(self, url, response=None, html_content=None):
+        self.url = url
+        self.response = response
+        self.html_content = html_content
+        if USE_REFACTORED:
+            from .scanners_refactored_batch10 import ExceptionHandlingScanner as RefactoredScanner
+            import requests
+            self.scanner = RefactoredScanner(url=url, response=response,
+                                           html_content=html_content,
+                                           http_client=requests)
+        else:
+            from .scanners_exception import ExceptionHandlingScanner as OriginalScanner
+            self.scanner = OriginalScanner(url, response, html_content)
+
+    def scan(self) -> Dict[str, Any]:
+        return self.scanner.scan()
+

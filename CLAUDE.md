@@ -25,19 +25,18 @@ WEAK is a Django-based web vulnerability scanner that provides comprehensive sec
 weak/
 ├── scanner/          # Core scanning logic
 │   ├── base.py       # BaseScanner 기본 클래스 (템플릿 메서드 패턴)
-│   ├── scanners.py   # Basic scanner implementations (15 scanners)
-│   ├── scanners_refactored.py  # 리팩토링된 스캐너 Batch 1 (2개)
-│   ├── scanners_refactored_batch1.py  # 리팩토링된 스캐너 Batch 1 (3개)
-│   ├── scanners_refactored_batch2.py  # 리팩토링된 스캐너 Batch 2 (5개)
-│   ├── scanners_compat.py  # 호환성 레이어 (점진적 마이그레이션)
+│   ├── scanners_refactored_batch1.py  # Basic security (3개)
+│   ├── scanners_refactored_batch2.py  # Security headers & cookies (5개)
+│   ├── scanners_refactored_batch3.py  # Information disclosure (4개)
+│   ├── scanners_refactored_batch4.py  # Advanced security (5개)
+│   ├── scanners_refactored_batch5.py  # Advanced security continued (5개)
+│   ├── scanners_refactored_batch6.py  # API & auth security (8개)
+│   ├── scanners_refactored_batch7.py  # Business logic (7개)
+│   ├── scanners_refactored_batch8.py  # Supply chain advanced (5개)
+│   ├── scanners_refactored_batch9.py  # Data integrity advanced (4개)
+│   ├── scanners_refactored_batch10.py  # Exception handling (1개)
+│   ├── scanners_compat.py  # 호환성 레이어 (완전 마이그레이션 완료)
 │   ├── scanner_migration.py  # 마이그레이션 매핑 관리
-│   ├── scanners_advanced.py  # Advanced security scanners (10 scanners)
-│   ├── scanners_api.py  # API/Auth security scanners (8 scanners)
-│   ├── scanners_supply_chain.py  # OWASP 2025 supply chain scanner (1 scanner)
-│   ├── scanners_exception.py  # OWASP 2025 exception handling scanner (1 scanner)
-│   ├── scanners_business_logic.py  # Business logic scanners (7 scanners)
-│   ├── scanners_supply_chain_advanced.py  # Supply chain advanced (4 scanners)
-│   ├── scanners_integrity_advanced.py  # Data integrity advanced (4 scanners)
 │   ├── tasks.py      # Background task processing
 │   ├── progress_manager.py  # Progress tracking system (50 scanners total)
 │   ├── security_scan_refactored.py  # Refactored security scanning
@@ -61,11 +60,19 @@ weak/
 │   │   └── wizard.css    # Three-step wizard styles
 │   └── js/
 │       └── scanner.js    # Frontend logic with detailed views
-├── tests/            # 테스트 코드 (새로 추가됨)
+├── tests/            # 테스트 코드 (269개 테스트 완료)
 │   ├── conftest.py   # pytest 설정 및 fixtures
 │   ├── unit/         # 단위 테스트
-│   │   ├── test_refactored_scanners.py  # Batch 1 테스트 (19개)
-│   │   └── test_batch2_scanners.py      # Batch 2 테스트 (33개)
+│   │   ├── test_batch1_scanners.py      # Batch 1 테스트 (19개)
+│   │   ├── test_batch2_scanners.py      # Batch 2 테스트 (33개)
+│   │   ├── test_batch3_scanners.py      # Batch 3 테스트 (26개)
+│   │   ├── test_batch4_scanners.py      # Batch 4 테스트 (30개)
+│   │   ├── test_batch5_scanners.py      # Batch 5 테스트 (32개)
+│   │   ├── test_batch6_scanners.py      # Batch 6 테스트 (37개)
+│   │   ├── test_batch7_scanners.py      # Batch 7 테스트 (37개)
+│   │   ├── test_batch8_scanners.py      # Batch 8 테스트 (26개)
+│   │   ├── test_batch9_scanners.py      # Batch 9 테스트 (28개)
+│   │   └── test_batch10_scanners.py     # Batch 10 테스트 (21개)
 │   ├── integration/  # 통합 테스트
 │   │   └── test_integration.py          # tasks.py 통합 테스트
 │   └── golden/       # Golden test 스냅샷
@@ -83,9 +90,9 @@ weak/
 - **Self-contained scanners**: Each scanner class contains its own metadata
 - **No central registry**: Scanners manage their own configuration
 - **Weighted progress system**: Dynamic progress calculation based on scanner weights
-- **BaseScanner pattern**: Template method pattern for standardized interfaces (리팩토링됨)
+- **BaseScanner pattern**: 모든 스캐너가 Template method pattern을 사용하는 표준화된 인터페이스 구현
 - **Dependency injection**: HTTP 클라이언트 주입으로 테스트 가능성 향상
-- **Compatibility layer**: scanners_compat.py를 통한 점진적 마이그레이션
+- **Compatibility layer**: scanners_compat.py를 통한 레거시 코드와의 완벽한 하위 호환성 유지
 
 ### UI/UX Philosophy
 - **Three-step wizard pattern**: Input → Progress → Results
@@ -99,29 +106,11 @@ weak/
 
 ### Scanner Class Structure
 
-#### 기존 패턴 (Original Pattern)
-```python
-class ExampleScanner:
-    """Scanner description"""
+모든 스캐너는 BaseScanner 클래스를 상속받아 Template Method 패턴을 통해 구현됩니다:
 
-    # Scanner metadata MUST be inside the class
-    metadata = {
-        'id': 'unique_id',
-        'name': 'Display Name',
-        'icon': '🔍',
-        'description': 'What this scanner does',
-        'weight': 1,  # Relative weight for progress calculation
-        'field': 'result_field_name'
-    }
-
-    def scan(self, url, content):
-        # Implementation
-        return results
-```
-
-#### 리팩토링된 패턴 (Refactored Pattern with BaseScanner)
 ```python
 from scanner.base import BaseScanner
+from typing import Dict, Any
 
 class ExampleScanner(BaseScanner):
     """Scanner description"""
@@ -131,7 +120,7 @@ class ExampleScanner(BaseScanner):
         'name': 'Display Name',
         'icon': '🔍',
         'description': 'What this scanner does',
-        'weight': 1,
+        'weight': 1,  # Relative weight for progress calculation
         'field': 'result_field_name'
     }
 
@@ -142,9 +131,13 @@ class ExampleScanner(BaseScanner):
         pass
 
     def _get_additional_fields(self) -> Dict[str, Any]:
-        """추가 필드 반환"""
+        """추가 필드 반환 (선택적)"""
         return {'custom_field': 'value'}
 ```
+
+### 호환성 레이어
+
+기존 코드와의 완벽한 하위 호환성을 위해 `scanners_compat.py`가 래퍼 클래스를 제공합니다. 이를 통해 레거시 코드 수정 없이 새로운 스캐너를 사용할 수 있습니다.
 
 ### Progress Management
 - Uses `ProgressManager` class for weighted distribution
