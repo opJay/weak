@@ -53,68 +53,85 @@
 
         <!-- Results State (완료되었을 때 표시) -->
         <div id="resultsSection" style="display: none;">
-            <div class="step3-container">
-                <div class="step3-content">
-                    <!-- Scan Info -->
-                    <div class="scan-info">
-                        <div class="scan-url" id="scanUrl">-</div>
-                        <div class="scan-time" id="scanTime">-</div>
-                    </div>
-
-                    <!-- Summary Cards -->
-                    <div class="step3-summary-cards">
-                        <div class="step3-summary-card">
-                            <div class="step3-card-icon">🔒</div>
-                            <div class="step3-card-title">보안 점수</div>
-                            <div class="step3-card-value" id="securityScore">-</div>
+            <!-- Split Layout Container -->
+            <div class="results-container">
+                <!-- 좌측 패널 -->
+                <div class="results-left-panel">
+                    <!-- Scan Info Bar (좌측 최상단) -->
+                    <div class="scan-info-bar">
+                        <div class="scan-info-content">
+                            <span class="scan-url" id="scanUrl">-</span>
+                            <span class="scan-time" id="scanTime">-</span>
                         </div>
-                        <div class="step3-summary-card">
-                            <div class="step3-card-icon">📊</div>
-                            <div class="step3-card-title">웹 표준</div>
-                            <div class="step3-card-value" id="standardsScore">-</div>
-                        </div>
-                        <div class="step3-summary-card">
-                            <div class="step3-card-icon">♿</div>
-                            <div class="step3-card-title">접근성</div>
-                            <div class="step3-card-value" id="accessibilityScore">-</div>
+                        <div class="scan-actions">
+                            <a href="/" class="scan-action-btn primary">새 스캔</a>
+                            <button class="scan-action-btn secondary" id="shareBtn">공유</button>
                         </div>
                     </div>
 
-                    <!-- Detailed Test Results -->
-                    <div class="step3-details-section">
-                        <!-- Security Details -->
-                        <div class="step3-detail-card" id="securityDetails">
-                            <h3 class="step3-detail-title">🔒 보안 검사 상세 결과</h3>
-                            <div class="step3-test-list" id="securityTestList">
-                                <!-- Security test results will be added here dynamically -->
+                    <!-- 종합 점수 카드 -->
+                    <div class="summary-section">
+                        <div class="summary-cards">
+                            <div class="summary-card">
+                                <div class="summary-icon">🔒</div>
+                                <div class="summary-info">
+                                    <div class="summary-title">보안</div>
+                                    <div class="summary-value" id="securityScore">-</div>
+                                </div>
                             </div>
-                        </div>
-
-                        <!-- Standards Details -->
-                        <div class="step3-detail-card" id="standardsDetails">
-                            <h3 class="step3-detail-title">📊 웹 표준 검사 상세 결과</h3>
-                            <div class="step3-test-list" id="standardsTestList">
-                                <!-- Standards test results will be added here dynamically -->
+                            <div class="summary-card">
+                                <div class="summary-icon">📊</div>
+                                <div class="summary-info">
+                                    <div class="summary-title">웹 표준</div>
+                                    <div class="summary-value" id="standardsScore">-</div>
+                                </div>
                             </div>
-                        </div>
-
-                        <!-- Accessibility Details -->
-                        <div class="step3-detail-card" id="accessibilityDetails">
-                            <h3 class="step3-detail-title">♿ 접근성 검사 상세 결과</h3>
-                            <div class="step3-test-list" id="accessibilityTestList">
-                                <!-- Accessibility test results will be added here dynamically -->
+                            <div class="summary-card">
+                                <div class="summary-icon">♿</div>
+                                <div class="summary-info">
+                                    <div class="summary-title">접근성</div>
+                                    <div class="summary-value" id="accessibilityScore">-</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="step3-actions">
-                        <a href="/" class="step3-btn step3-btn-primary" style="text-decoration: none; display: inline-block;">
-                            새 스캔 시작
-                        </a>
-                        <button class="step3-btn step3-btn-secondary" id="shareBtn">
-                            공유하기
-                        </button>
+                    <!-- 검사 항목 리스트 (좌측 하단) -->
+                    <div class="test-list-section">
+                        <!-- Security Tests -->
+                        <div class="test-category" id="securityCategory">
+                            <h3 class="category-title">🔒 보안 검사</h3>
+                            <div class="test-items" id="securityTestList">
+                                <!-- Security test items will be added here dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Standards Tests -->
+                        <div class="test-category" id="standardsCategory">
+                            <h3 class="category-title">📊 웹 표준 검사</h3>
+                            <div class="test-items" id="standardsTestList">
+                                <!-- Standards test items will be added here dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Accessibility Tests -->
+                        <div class="test-category" id="accessibilityCategory">
+                            <h3 class="category-title">♿ 접근성 검사</h3>
+                            <div class="test-items" id="accessibilityTestList">
+                                <!-- Accessibility test items will be added here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 우측 패널 -->
+                <div class="results-right-panel">
+                    <div class="detail-display" id="detailDisplay">
+                        <div class="no-selection">
+                            <span class="no-selection-icon">👈</span>
+                            <p class="no-selection-text">좌측에서 검사 항목을 선택해주세요</p>
+                            <p class="no-selection-hint">선택한 항목의 상세 정보가 여기에 표시됩니다</p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -6,6 +6,8 @@
 // Global variables
 let currentScanId = null;
 let statusPollInterval = null;
+let currentResults = null;  // 전체 결과 저장
+let currentSelection = null; // 현재 선택된 항목
 
 // API Base URL
 const API_BASE_URL = '/api';
@@ -46,6 +48,9 @@ function initializeEventListeners() {
     if (shareBtn) {
         shareBtn.addEventListener('click', shareScanResults);
     }
+
+    // 키보드 네비게이션
+    document.addEventListener('keydown', handleKeyboardNavigation);
 }
 
 /**
@@ -197,6 +202,9 @@ async function loadScanResults() {
         const data = await response.json();
         console.log('Scan results loaded:', data);
 
+        // 전체 결과 저장
+        currentResults = data;
+
         // Display results
         displayResults(data);
 
@@ -229,7 +237,7 @@ function displayResults(data) {
         displaySecurityDetails(data.security_result);
     } else {
         document.getElementById('securityScore').textContent = '-';
-        document.getElementById('securityDetails').style.display = 'none';
+        document.getElementById('securityCategory').style.display = 'none';
     }
 
     // Display standards results
@@ -238,7 +246,7 @@ function displayResults(data) {
         displayStandardsDetails(data.standards_result);
     } else {
         document.getElementById('standardsScore').textContent = '-';
-        document.getElementById('standardsDetails').style.display = 'none';
+        document.getElementById('standardsCategory').style.display = 'none';
     }
 
     // Display accessibility results
@@ -247,7 +255,7 @@ function displayResults(data) {
         displayAccessibilityDetails(data.accessibility_result);
     } else {
         document.getElementById('accessibilityScore').textContent = '-';
-        document.getElementById('accessibilityDetails').style.display = 'none';
+        document.getElementById('accessibilityCategory').style.display = 'none';
     }
 }
 
@@ -273,59 +281,7 @@ function displaySecurityDetails(result) {
 
     tests.forEach(test => {
         const testData = test.results || result[test.field];
-        const item = document.createElement('div');
-        item.className = 'step3-test-item';
-
-        let statusClass = 'pass';
-        let badgeText = '통과';
-        let hasDetails = false;
-
-        // Analyze test results
-        if (testData) {
-            if (testData.has_xss || testData.has_sqli || testData.misconfigured === true) {
-                statusClass = 'fail';
-                badgeText = `취약점 ${testData.total || 0}개`;
-                hasDetails = true;
-            } else if (testData.missing_count > 0) {
-                statusClass = 'warning';
-                badgeText = `누락 ${testData.missing_count}개`;
-                hasDetails = true;
-            } else if (testData.status === 'warning') {
-                statusClass = 'warning';
-                badgeText = '경고';
-                hasDetails = true;
-            } else {
-                statusClass = 'pass';
-                badgeText = '통과';
-                hasDetails = true;
-            }
-        }
-
-        // Create item header with expandable functionality
-        const headerHTML = `
-            <div class="step3-test-header" ${hasDetails ? 'onclick="toggleDetails(this)"' : ''}>
-                <div class="step3-test-status">${test.icon || '🔍'}</div>
-                <div class="step3-test-name">
-                    ${test.name || test.description || '테스트'}
-                    ${hasDetails ? '<span class="step3-expand-icon">▼</span>' : ''}
-                </div>
-                <div class="step3-test-result">
-                    <span class="step3-test-badge ${statusClass}">${badgeText}</span>
-                </div>
-            </div>
-        `;
-
-        item.innerHTML = headerHTML;
-
-        // Add detailed information section if available
-        if (hasDetails && testData) {
-            const detailsDiv = document.createElement('div');
-            detailsDiv.className = 'step3-test-details';
-            detailsDiv.style.display = 'none';
-            detailsDiv.innerHTML = '<div class="step3-details-content">상세 정보</div>';
-            item.appendChild(detailsDiv);
-        }
-
+        const item = createTestItem(test, testData, 'security', result);
         container.appendChild(item);
     });
 }
@@ -338,32 +294,17 @@ function displayStandardsDetails(result) {
     container.innerHTML = '';
 
     const tests = [
-        { name: 'HTML 유효성', field: 'html_validation', icon: '📄' },
-        { name: 'CSS 유효성', field: 'css_validation', icon: '🎨' },
-        { name: '성능 최적화', field: 'performance', icon: '⚡' },
-        { name: 'SEO 최적화', field: 'seo', icon: '🔍' }
+        { name: 'HTML 유효성', field: 'html_validation', icon: '📄', id: 'html_validation' },
+        { name: 'CSS 유효성', field: 'css_validation', icon: '🎨', id: 'css_validation' },
+        { name: '성능 최적화', field: 'performance', icon: '⚡', id: 'performance' },
+        { name: 'SEO 최적화', field: 'seo', icon: '🔍', id: 'seo' }
     ];
 
     tests.forEach(test => {
         const testData = result[test.field];
         if (!testData) return;
 
-        const item = document.createElement('div');
-        item.className = 'step3-test-item';
-
-        let statusClass = testData.is_valid || testData.score > 80 ? 'pass' : 'warning';
-        let badgeText = testData.is_valid ? '통과' : `이슈 ${testData.errors?.length || 0}개`;
-
-        item.innerHTML = `
-            <div class="step3-test-header">
-                <div class="step3-test-status">${test.icon}</div>
-                <div class="step3-test-name">${test.name}</div>
-                <div class="step3-test-result">
-                    <span class="step3-test-badge ${statusClass}">${badgeText}</span>
-                </div>
-            </div>
-        `;
-
+        const item = createTestItem(test, testData, 'standards', result);
         container.appendChild(item);
     });
 }
@@ -376,54 +317,426 @@ function displayAccessibilityDetails(result) {
     container.innerHTML = '';
 
     const tests = [
-        { name: '대체 텍스트', field: 'alt_text', icon: '🖼️' },
-        { name: '폼 레이블', field: 'form_labels', icon: '📝' },
-        { name: '제목 구조', field: 'heading_structure', icon: '📑' },
-        { name: 'ARIA 속성', field: 'aria', icon: '♿' },
-        { name: '색상 대비', field: 'contrast', icon: '🎨' },
-        { name: '키보드 접근성', field: 'keyboard', icon: '⌨️' }
+        { name: '대체 텍스트', field: 'alt_text', icon: '🖼️', id: 'alt_text' },
+        { name: '폼 레이블', field: 'form_labels', icon: '📝', id: 'form_labels' },
+        { name: '제목 구조', field: 'heading_structure', icon: '📑', id: 'heading_structure' },
+        { name: 'ARIA 속성', field: 'aria', icon: '♿', id: 'aria' },
+        { name: '색상 대비', field: 'contrast', icon: '🎨', id: 'contrast' },
+        { name: '키보드 접근성', field: 'keyboard', icon: '⌨️', id: 'keyboard' }
     ];
 
     tests.forEach(test => {
         const testData = result[test.field];
         if (!testData) return;
 
-        const item = document.createElement('div');
-        item.className = 'step3-test-item';
-
-        let statusClass = testData.issues?.length > 0 ? 'warning' : 'pass';
-        let badgeText = testData.issues?.length > 0 ? `이슈 ${testData.issues.length}개` : '통과';
-
-        item.innerHTML = `
-            <div class="step3-test-header">
-                <div class="step3-test-status">${test.icon}</div>
-                <div class="step3-test-name">${test.name}</div>
-                <div class="step3-test-result">
-                    <span class="step3-test-badge ${statusClass}">${badgeText}</span>
-                </div>
-            </div>
-        `;
-
+        const item = createTestItem(test, testData, 'accessibility', result);
         container.appendChild(item);
     });
 }
 
 /**
- * Toggle details section visibility
+ * Create test item element
  */
-window.toggleDetails = function(headerElement) {
-    const parent = headerElement.closest('.step3-test-item');
-    const details = parent.querySelector('.step3-test-details');
-    const icon = parent.querySelector('.step3-expand-icon');
+function createTestItem(test, testData, category, fullResult) {
+    const item = document.createElement('div');
+    item.className = 'test-item';
+    item.dataset.testId = test.id;
+    item.dataset.category = category;
 
-    if (details) {
-        if (details.style.display === 'none' || !details.style.display) {
-            details.style.display = 'block';
-            if (icon) icon.textContent = '▲';
+    // 상태 판정
+    const status = getTestStatus(testData);
+
+    item.innerHTML = `
+        <div class="test-item-left">
+            <span class="test-icon">${test.icon || '🔍'}</span>
+            <span class="test-name">${test.name}</span>
+        </div>
+        <div class="test-item-right">
+            <span class="test-badge ${status.class}">${status.text}</span>
+        </div>
+    `;
+
+    // 클릭 이벤트 (폴딩 대신 선택)
+    item.addEventListener('click', () => {
+        selectTestItem(item, test, testData, fullResult);
+    });
+
+    return item;
+}
+
+/**
+ * Get test status
+ */
+function getTestStatus(testData) {
+    if (!testData) {
+        return { class: 'info', text: '데이터 없음' };
+    }
+
+    // 다양한 케이스 처리
+    if (testData.has_xss || testData.has_sqli || testData.misconfigured === true) {
+        const count = testData.total || testData.vulnerabilities?.length || 0;
+        return { class: 'fail', text: `취약점 ${count}개` };
+    }
+
+    if (testData.missing_count > 0) {
+        return { class: 'warning', text: `누락 ${testData.missing_count}개` };
+    }
+
+    if (testData.issues && testData.issues.length > 0) {
+        return { class: 'warning', text: `이슈 ${testData.issues.length}개` };
+    }
+
+    if (testData.errors && testData.errors.length > 0) {
+        return { class: 'warning', text: `오류 ${testData.errors.length}개` };
+    }
+
+    if (testData.status === 'warning') {
+        return { class: 'warning', text: '경고' };
+    }
+
+    if (testData.status === 'fail') {
+        return { class: 'fail', text: '실패' };
+    }
+
+    if (testData.is_valid === false) {
+        return { class: 'warning', text: '유효하지 않음' };
+    }
+
+    if (testData.score !== undefined) {
+        if (testData.score >= 80) {
+            return { class: 'pass', text: `${testData.score}점` };
+        } else if (testData.score >= 50) {
+            return { class: 'warning', text: `${testData.score}점` };
         } else {
-            details.style.display = 'none';
-            if (icon) icon.textContent = '▼';
+            return { class: 'fail', text: `${testData.score}점` };
         }
+    }
+
+    return { class: 'pass', text: '통과' };
+}
+
+/**
+ * Select test item
+ */
+function selectTestItem(element, test, testData, fullResult) {
+    // 이전 선택 제거
+    document.querySelectorAll('.test-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // 현재 선택 활성화
+    element.classList.add('active');
+    currentSelection = { test, testData, element, fullResult };
+
+    // 우측 패널에 상세 정보 표시
+    displayDetailedInfo(test, testData, fullResult);
+}
+
+/**
+ * Display detailed information
+ */
+function displayDetailedInfo(test, testData, fullResult) {
+    const panel = document.getElementById('detailDisplay');
+
+    if (!testData) {
+        panel.innerHTML = '<div class="no-data">데이터가 없습니다</div>';
+        return;
+    }
+
+    const status = getTestStatus(testData);
+
+    let html = `
+        <div class="detail-header">
+            <h2>${test.icon} ${test.name}</h2>
+            <span class="detail-status ${status.class}">${status.text}</span>
+        </div>
+
+        <div class="detail-content">
+    `;
+
+    // 설명
+    if (test.description) {
+        html += `<div class="detail-description">${test.description}</div>`;
+    }
+
+    // 보안 취약점 상세
+    if (testData.vulnerabilities && testData.vulnerabilities.length > 0) {
+        html += renderVulnerabilities(testData.vulnerabilities);
+    }
+
+    // 누락된 헤더 (보안 헤더 검사)
+    if (testData.headers) {
+        html += renderSecurityHeaders(testData.headers);
+    }
+
+    // 웹 표준 오류
+    if (testData.errors && testData.errors.length > 0) {
+        html += renderValidationErrors(testData.errors);
+    }
+
+    // 접근성 이슈
+    if (testData.issues && testData.issues.length > 0) {
+        html += renderAccessibilityIssues(testData.issues);
+    }
+
+    // SSL/TLS 정보
+    if (test.id === 'ssl_tls' && testData) {
+        html += renderSSLInfo(testData);
+    }
+
+    // 권장사항
+    const recommendation = testData.recommendation || test.recommendation || getDefaultRecommendation(test.id);
+    if (recommendation) {
+        html += `
+            <div class="detail-recommendation">
+                <h3>✅ 권장 조치사항</h3>
+                <p>${recommendation}</p>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    panel.innerHTML = html;
+}
+
+/**
+ * Render vulnerabilities
+ */
+function renderVulnerabilities(vulnerabilities) {
+    let html = '<div class="vulnerabilities-section">';
+    html += '<h3>🚨 발견된 취약점</h3>';
+
+    vulnerabilities.forEach(vuln => {
+        const severity = vuln.severity || 'medium';
+        html += `
+            <div class="vuln-item severity-${severity}">
+                <div class="vuln-header">
+                    <span class="vuln-severity">${severity.toUpperCase()}</span>
+                    <span class="vuln-title">${vuln.title || '취약점'}</span>
+                </div>
+                <div class="vuln-body">
+                    <p>${vuln.description || ''}</p>
+                    ${vuln.affected_element ?
+                        `<div class="vuln-location">📍 위치: <code>${escapeHtml(vuln.affected_element)}</code></div>` : ''}
+                    ${vuln.evidence ?
+                        `<div class="vuln-evidence">
+                            <strong>증거:</strong>
+                            <pre>${escapeHtml(vuln.evidence)}</pre>
+                        </div>` : ''}
+                    ${vuln.recommendation ?
+                        `<div class="vuln-fix">💡 해결방법: ${vuln.recommendation}</div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Render security headers
+ */
+function renderSecurityHeaders(headers) {
+    let html = '<div class="vulnerabilities-section">';
+    html += '<h3>🛡️ 보안 헤더 검사 결과</h3>';
+
+    // 누락된 헤더
+    const missingHeaders = Object.entries(headers).filter(([_, info]) => !info.present);
+    if (missingHeaders.length > 0) {
+        html += '<h4>누락된 헤더</h4>';
+        missingHeaders.forEach(([headerName, headerInfo]) => {
+            html += `
+                <div class="vuln-item severity-medium">
+                    <div class="vuln-header">
+                        <span class="vuln-severity">${headerInfo.severity || 'MEDIUM'}</span>
+                        <span class="vuln-title">${headerName}</span>
+                    </div>
+                    <div class="vuln-body">
+                        <p>${headerInfo.description || '이 보안 헤더가 설정되지 않았습니다.'}</p>
+                        ${headerInfo.recommendation ?
+                            `<div class="vuln-fix">💡 권장 설정: <code>${headerInfo.recommendation}</code></div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // 설정된 헤더
+    const presentHeaders = Object.entries(headers).filter(([_, info]) => info.present);
+    if (presentHeaders.length > 0) {
+        html += '<h4>✅ 올바르게 설정된 헤더</h4>';
+        presentHeaders.forEach(([headerName, headerInfo]) => {
+            html += `
+                <div class="vuln-item" style="border-left: 4px solid #22c55e; background: #f0fdf4;">
+                    <div class="vuln-header">
+                        <span class="vuln-severity" style="background: #22c55e; color: white;">OK</span>
+                        <span class="vuln-title">${headerName}</span>
+                    </div>
+                    <div class="vuln-body">
+                        <p>현재 설정값: <code>${headerInfo.value || '설정됨'}</code></p>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Render validation errors
+ */
+function renderValidationErrors(errors) {
+    let html = '<div class="vulnerabilities-section">';
+    html += '<h3>⚠️ 유효성 검사 오류</h3>';
+
+    errors.forEach(error => {
+        html += `
+            <div class="vuln-item severity-low">
+                <div class="vuln-body">
+                    <p>${error.message || error}</p>
+                    ${error.line ? `<div class="vuln-location">📍 위치: Line ${error.line}</div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Render accessibility issues
+ */
+function renderAccessibilityIssues(issues) {
+    let html = '<div class="vulnerabilities-section">';
+    html += '<h3>♿ 접근성 이슈</h3>';
+
+    issues.forEach(issue => {
+        html += `
+            <div class="vuln-item severity-medium">
+                <div class="vuln-body">
+                    <p>${issue.description || issue.message || issue}</p>
+                    ${issue.element ? `<div class="vuln-location">📍 요소: <code>${escapeHtml(issue.element)}</code></div>` : ''}
+                    ${issue.recommendation ? `<div class="vuln-fix">💡 권장사항: ${issue.recommendation}</div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Render SSL/TLS information
+ */
+function renderSSLInfo(data) {
+    let html = '<div class="vulnerabilities-section">';
+    html += '<h3>🔐 SSL/TLS 정보</h3>';
+
+    if (data.https === false) {
+        html += `
+            <div class="vuln-item severity-high">
+                <div class="vuln-header">
+                    <span class="vuln-severity">HIGH</span>
+                    <span class="vuln-title">HTTPS 미사용</span>
+                </div>
+                <div class="vuln-body">
+                    <p>웹사이트가 암호화되지 않은 HTTP를 사용하고 있습니다.</p>
+                    <div class="vuln-fix">💡 SSL 인증서를 설치하고 HTTPS를 활성화하세요.</div>
+                </div>
+            </div>
+        `;
+    } else {
+        html += `
+            <div class="vuln-item" style="border-left: 4px solid #22c55e; background: #f0fdf4;">
+                <div class="vuln-header">
+                    <span class="vuln-severity" style="background: #22c55e; color: white;">OK</span>
+                    <span class="vuln-title">HTTPS 사용 중</span>
+                </div>
+                <div class="vuln-body">
+                    <p>웹사이트가 SSL/TLS로 안전하게 암호화되어 있습니다.</p>
+                </div>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Get default recommendation
+ */
+function getDefaultRecommendation(testId) {
+    const recommendations = {
+        'xss': 'Todos os dados de entrada devem ser validados e sanitizados. Use funções de escape apropriadas para o contexto de saída.',
+        'sql_injection': 'Use prepared statements ou stored procedures. Nunca concatene strings diretamente nas queries SQL.',
+        'security_headers': '모든 보안 헤더를 올바르게 설정하세요. Content-Security-Policy, X-Frame-Options, X-Content-Type-Options 등을 포함해야 합니다.',
+        'cors': 'CORS 설정을 검토하고, 신뢰할 수 있는 도메인만 허용하세요.',
+        'csrf': 'CSRF 토큰을 모든 상태 변경 요청에 포함시키세요.',
+        'ssl_tls': 'SSL/TLS 인증서를 설치하고 모든 트래픽을 HTTPS로 리다이렉트하세요.',
+        'cookie': '쿠키에 Secure, HttpOnly, SameSite 속성을 설정하세요.',
+        'html_validation': 'W3C 표준에 맞게 HTML을 작성하세요. 유효성 검사 도구를 사용하여 오류를 수정하세요.',
+        'css_validation': 'CSS 문법 오류를 수정하고, 벤더 프리픽스를 적절히 사용하세요.',
+        'performance': '이미지 최적화, 코드 압축, 캐싱 전략을 구현하세요.',
+        'seo': '메타 태그 최적화, 구조화된 데이터 추가, 사이트맵 생성을 고려하세요.',
+        'alt_text': '모든 이미지에 의미 있는 대체 텍스트를 제공하세요.',
+        'form_labels': '모든 폼 요소에 명확한 레이블을 연결하세요.',
+        'heading_structure': '논리적인 제목 계층 구조를 사용하세요 (h1 → h2 → h3).',
+        'aria': 'ARIA 속성을 올바르게 사용하여 스크린 리더 접근성을 개선하세요.',
+        'contrast': '텍스트와 배경 간의 충분한 색상 대비를 확보하세요 (WCAG 기준).',
+        'keyboard': '모든 인터랙티브 요소가 키보드로 접근 가능하도록 하세요.'
+    };
+
+    return recommendations[testId] || '웹 표준과 보안 모범 사례를 따라 수정하세요.';
+}
+
+/**
+ * Escape HTML
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Handle keyboard navigation
+ */
+function handleKeyboardNavigation(e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        navigateTestItems(e.key === 'ArrowDown' ? 1 : -1);
+    }
+}
+
+/**
+ * Navigate test items
+ */
+function navigateTestItems(direction) {
+    const items = Array.from(document.querySelectorAll('.test-item'));
+    if (items.length === 0) return;
+
+    const currentIndex = items.findIndex(item => item.classList.contains('active'));
+    let nextIndex;
+
+    if (currentIndex === -1) {
+        // 선택된 항목이 없으면 첫 번째 또는 마지막 선택
+        nextIndex = direction > 0 ? 0 : items.length - 1;
+    } else {
+        nextIndex = currentIndex + direction;
+        // 순환하지 않도록 제한
+        if (nextIndex < 0) nextIndex = 0;
+        if (nextIndex >= items.length) nextIndex = items.length - 1;
+    }
+
+    if (items[nextIndex] && nextIndex !== currentIndex) {
+        items[nextIndex].click();
+        items[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }
 
@@ -463,79 +776,73 @@ function shareScanResults() {
 
     // Copy to clipboard
     navigator.clipboard.writeText(url).then(() => {
-        alert('결과 페이지 URL이 클립보드에 복사되었습니다.');
+        // Show toast notification
+        showToast('결과 페이지 URL이 클립보드에 복사되었습니다.');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('URL 복사에 실패했습니다.');
+        showToast('URL 복사에 실패했습니다.', 'error');
     });
 }
 
 /**
- * Add missing styles for error section
+ * Show toast notification
  */
+function showToast(message, type = 'success') {
+    // Remove existing toast
+    const existingToast = document.querySelector('.toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+        animation: slideIn 0.3s ease;
+    `;
+
+    document.body.appendChild(toast);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Add toast animations
 const style = document.createElement('style');
 style.textContent = `
-    .scan-info {
-        text-align: center;
-        margin-bottom: 30px;
-        padding: 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
 
-    .scan-url {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: #333;
-        margin-bottom: 10px;
-    }
-
-    .scan-time {
-        color: #666;
-        font-size: 0.9em;
-    }
-
-    .error-container {
-        text-align: center;
-        padding: 60px 20px;
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    .error-icon {
-        font-size: 64px;
-        margin-bottom: 20px;
-    }
-
-    .error-title {
-        font-size: 24px;
-        color: #333;
-        margin-bottom: 10px;
-    }
-
-    .error-message {
-        color: #666;
-        font-size: 16px;
-        margin-bottom: 30px;
-    }
-
-    .error-actions {
-        margin-top: 30px;
-    }
-
-    .step3-btn-secondary {
-        background: #6c757d;
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        margin-left: 10px;
-    }
-
-    .step3-btn-secondary:hover {
-        background: #5a6268;
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
     }
 `;
 document.head.appendChild(style);
