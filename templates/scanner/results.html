@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Weak - 스캔 결과">
+    <title>스캔 결과 - Weak</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/scanner.css">
+    <link rel="stylesheet" href="/static/css/wizard.css">
+</head>
+<body data-scan-id="{{ scan_id }}">
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-container">
+            <div class="header-left">
+                <h1 class="logo">
+                    <a href="/" style="color: inherit; text-decoration: none;">Weak</a>
+                </h1>
+                <p class="tagline">웹 취약점 스캐너</p>
+            </div>
+            <div class="header-right">
+                <div class="header-notice">
+                    ⚠️ 이 도구는 <strong>교육 및 연구 목적</strong>으로만 사용되어야 합니다.
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Loading State (진행 중일 때 표시) -->
+        <div id="loadingSection" style="display: none;">
+            <div class="step2-container">
+                <div class="step2-title">스캔 진행 중...</div>
+
+                <div class="step2-progress-container">
+                    <div class="step2-progress-bar">
+                        <div class="step2-progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="step2-progress-text" id="progressText">0%</div>
+                </div>
+
+                <div class="step2-current-step" id="currentStepDisplay">
+                    <div class="step2-step-icon" id="stepIcon">🔍</div>
+                    <div class="step2-step-title" id="stepTitle">초기화</div>
+                    <div class="step2-step-desc" id="stepDesc">스캔 준비 중...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results State (완료되었을 때 표시) -->
+        <div id="resultsSection" style="display: none;">
+            <div class="step3-container">
+                <div class="step3-content">
+                    <!-- Scan Info -->
+                    <div class="scan-info">
+                        <div class="scan-url" id="scanUrl">-</div>
+                        <div class="scan-time" id="scanTime">-</div>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="step3-summary-cards">
+                        <div class="step3-summary-card">
+                            <div class="step3-card-icon">🔒</div>
+                            <div class="step3-card-title">보안 점수</div>
+                            <div class="step3-card-value" id="securityScore">-</div>
+                        </div>
+                        <div class="step3-summary-card">
+                            <div class="step3-card-icon">📊</div>
+                            <div class="step3-card-title">웹 표준</div>
+                            <div class="step3-card-value" id="standardsScore">-</div>
+                        </div>
+                        <div class="step3-summary-card">
+                            <div class="step3-card-icon">♿</div>
+                            <div class="step3-card-title">접근성</div>
+                            <div class="step3-card-value" id="accessibilityScore">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Test Results -->
+                    <div class="step3-details-section">
+                        <!-- Security Details -->
+                        <div class="step3-detail-card" id="securityDetails">
+                            <h3 class="step3-detail-title">🔒 보안 검사 상세 결과</h3>
+                            <div class="step3-test-list" id="securityTestList">
+                                <!-- Security test results will be added here dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Standards Details -->
+                        <div class="step3-detail-card" id="standardsDetails">
+                            <h3 class="step3-detail-title">📊 웹 표준 검사 상세 결과</h3>
+                            <div class="step3-test-list" id="standardsTestList">
+                                <!-- Standards test results will be added here dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Accessibility Details -->
+                        <div class="step3-detail-card" id="accessibilityDetails">
+                            <h3 class="step3-detail-title">♿ 접근성 검사 상세 결과</h3>
+                            <div class="step3-test-list" id="accessibilityTestList">
+                                <!-- Accessibility test results will be added here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="step3-actions">
+                        <a href="/" class="step3-btn step3-btn-primary" style="text-decoration: none; display: inline-block;">
+                            새 스캔 시작
+                        </a>
+                        <button class="step3-btn step3-btn-secondary" id="shareBtn">
+                            공유하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorSection" style="display: none;">
+            <div class="error-container">
+                <div class="error-icon">⚠️</div>
+                <h2 class="error-title">오류가 발생했습니다</h2>
+                <p class="error-message" id="errorMessage">스캔 중 문제가 발생했습니다.</p>
+                <div class="error-actions">
+                    <a href="/" class="step3-btn step3-btn-primary">홈으로 돌아가기</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Weak Scanner | <a href="https://github.com/opJay/weak" target="_blank">GitHub</a> | MIT License</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/static/js/results.js"></script>
+</body>
+</html>

@@ -87,6 +87,10 @@ body {
 /* Main Content */
 .main {
     min-height: calc(100vh - 140px - 60px); /* header 140px, footer 60px */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
 }
 
 .main-content {
@@ -586,14 +590,8 @@ body {
 }
 
 /* Wizard Step Management */
-.wizard-step {
-    display: none;
-}
-
-.wizard-step.active {
-    display: block;
-    animation: fadeIn 0.3s;
-}
+/* Wizard step styles removed - no longer using SPA wizard pattern */
+/* Pages now load independently */
 
 @keyframes fadeIn {
     from {

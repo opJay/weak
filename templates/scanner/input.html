@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Weak - 웹 취약점 스캐너. URL을 입력하여 보안, 웹 표준, 접근성을 분석합니다.">
+    <title>Weak - 웹 취약점 스캐너</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/scanner.css">
+    <link rel="stylesheet" href="/static/css/wizard.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-container">
+            <div class="header-left">
+                <h1 class="logo">Weak</h1>
+                <p class="tagline">웹 취약점 스캐너</p>
+            </div>
+            <div class="header-right">
+                <div class="header-notice">
+                    ⚠️ 이 도구는 <strong>교육 및 연구 목적</strong>으로만 사용되어야 합니다.
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="step1-container">
+            <div class="step1-logo">Weak</div>
+            <div class="step1-tagline">웹사이트 취약점을 빠르고 정확하게 분석합니다</div>
+
+            <form id="scanForm" class="step1-form">
+                <input
+                    type="url"
+                    id="urlInput"
+                    name="url"
+                    placeholder="스캔할 URL을 입력하세요 (예: https://example.com)"
+                    required
+                    pattern="https?://.+"
+                    class="step1-url-input"
+                >
+
+                <div class="step1-options">
+                    <label class="step1-checkbox">
+                        <input type="checkbox" name="scan_types" value="security" checked>
+                        <span>🔒 보안</span>
+                    </label>
+                    <label class="step1-checkbox">
+                        <input type="checkbox" name="scan_types" value="standards" checked>
+                        <span>📊 웹 표준</span>
+                    </label>
+                    <label class="step1-checkbox">
+                        <input type="checkbox" name="scan_types" value="accessibility" checked>
+                        <span>♿ 접근성</span>
+                    </label>
+                </div>
+
+                <div class="step1-advanced">
+                    <label class="step1-checkbox">
+                        <input type="checkbox" name="deep_scan" id="deepScan">
+                        <span>심층 스캔 (더 오래 걸립니다)</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="step1-submit" id="scanBtn">
+                    스캔 시작
+                </button>
+            </form>
+
+            <!-- Loading overlay -->
+            <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">스캔을 시작하고 있습니다...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Weak Scanner | <a href="https://github.com/opJay/weak" target="_blank">GitHub</a> | MIT License</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/static/js/input.js"></script>
+</body>
+</html>
