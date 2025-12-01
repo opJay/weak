@@ -52,6 +52,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;  /* 가로 스크롤 방지 */
 }
 
 /* Container */
@@ -77,6 +78,8 @@ body {
     align-items: center;
     width: 100%;
     height: 100%;
+    padding: 0 2rem;  /* 좌우 여백 추가 - 전체 화면 사용 시 필요 */
+    box-sizing: border-box;  /* padding 포함 크기 계산 */
 }
 
 .header-left {
@@ -116,6 +119,7 @@ body {
 /* Main */
 .main {
     flex: 1;
+    width: 100%;  /* 전체 너비 명시 - 전체 화면 사용 */
 }
 
 /* Card */
