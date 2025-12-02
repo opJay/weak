@@ -69,9 +69,11 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
             'sql_injection': 'sql_injection',
             'cors': 'cors_misconfiguration',
             'cookie_security': 'sensitive_data_exposure',
+            'cookies': 'sensitive_data_exposure',  # scanners_compat.py 별칭
             'csrf': 'csrf_protection',
             'clickjacking': 'clickjacking',
             'information_disclosure': 'sensitive_data_exposure',
+            'info_disclosure': 'sensitive_data_exposure',  # scanners_compat.py 별칭
             'http_methods': 'http_methods',
             'sensitive_files': 'sensitive_files',
             'mixed_content': 'mixed_content',
@@ -124,6 +126,7 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
             'package_integrity': 'package_integrity_vulnerabilities',
             'typosquatting': 'typosquatting_vulnerabilities',
             'outdated_dependency': 'outdated_dependency_vulnerabilities',
+            'outdated_dependencies': 'outdated_dependency_vulnerabilities',  # scanners_compat.py 별칭 (복수형)
             'license_compliance': 'license_compliance_vulnerabilities',
 
             # 데이터 무결성 강화
