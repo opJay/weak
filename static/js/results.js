@@ -31,7 +31,6 @@ function initializePage() {
         return;
     }
 
-    console.log('Scan ID:', currentScanId);
 
     // Initialize event listeners
     initializeEventListeners();
@@ -69,7 +68,6 @@ async function checkScanStatus() {
         }
 
         const data = await response.json();
-        console.log('Scan status:', data.status);
 
         // Handle based on status
         switch (data.status) {
@@ -189,24 +187,36 @@ function updateProgress(progress) {
  */
 async function loadScanResults() {
     try {
-        const response = await fetch(`${API_BASE_URL}/scan/${currentScanId}/results/`);
+        // 먼저 요약 API 시도 (경량 버전)
+        let usingSummaryAPI = true;
+        let response = await fetch(`${API_BASE_URL}/scan/${currentScanId}/summary/`);
 
         if (!response.ok) {
-            if (response.status === 404) {
-                showError('스캔 결과를 찾을 수 없습니다.');
-                return;
+            // 요약 API가 없으면 기존 API로 폴백
+            usingSummaryAPI = false;
+            response = await fetch(`${API_BASE_URL}/scan/${currentScanId}/results/`);
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    showError('스캔 결과를 찾을 수 없습니다.');
+                    return;
+                }
+                throw new Error('결과 로딩 실패');
             }
-            throw new Error('결과 로딩 실패');
         }
 
         const data = await response.json();
-        console.log('Scan results loaded:', data);
 
         // 전체 결과 저장
         currentResults = data;
 
-        // Display results
-        displayResults(data);
+        // Display results based on API type
+        if (usingSummaryAPI) {
+            displaySummaryResults(data);
+            setupLazyLoading();
+        } else {
+            displayResults(data);
+        }
 
     } catch (error) {
         console.error('Results loading error:', error);
@@ -293,16 +303,24 @@ function displayStandardsDetails(result) {
     const container = document.getElementById('standardsTestList');
     container.innerHTML = '';
 
-    const tests = [
-        { name: 'HTML 유효성', field: 'html_validation', icon: '📄', id: 'html_validation' },
-        { name: 'CSS 유효성', field: 'css_validation', icon: '🎨', id: 'css_validation' },
-        { name: '성능 최적화', field: 'performance', icon: '⚡', id: 'performance' },
-        { name: 'SEO 최적화', field: 'seo', icon: '🔍', id: 'seo' }
-    ];
+    // 동적 메타데이터 사용 (백엔드에서 제공)
+    let tests = result.scanner_metadata || [];
+
+    // 메타데이터가 없는 경우 기본값 사용 (하위 호환성)
+    if (tests.length === 0) {
+        tests = [
+            { name: 'HTML 유효성', field: 'html_errors', icon: '📄', id: 'html_validation' },
+            { name: 'CSS 유효성', field: 'css_errors', icon: '🎨', id: 'css_validation' },
+            { name: 'JavaScript 검사', field: 'js_errors', icon: '⚙️', id: 'js_validation' },
+            { name: 'SEO 최적화', field: 'seo_issues', icon: '🔍', id: 'seo_check' },
+            { name: '성능 검사', field: 'page_performance', icon: '⚡', id: 'performance_check' }
+        ];
+    }
 
     tests.forEach(test => {
-        const testData = result[test.field];
-        if (!testData) return;
+        const fieldName = test.field || test.id;
+        const testData = result[fieldName];
+        if (!testData && testData !== 0 && testData !== false) return;
 
         const item = createTestItem(test, testData, 'standards', result);
         container.appendChild(item);
@@ -316,18 +334,25 @@ function displayAccessibilityDetails(result) {
     const container = document.getElementById('accessibilityTestList');
     container.innerHTML = '';
 
-    const tests = [
-        { name: '대체 텍스트', field: 'alt_text', icon: '🖼️', id: 'alt_text' },
-        { name: '폼 레이블', field: 'form_labels', icon: '📝', id: 'form_labels' },
-        { name: '제목 구조', field: 'heading_structure', icon: '📑', id: 'heading_structure' },
-        { name: 'ARIA 속성', field: 'aria', icon: '♿', id: 'aria' },
-        { name: '색상 대비', field: 'contrast', icon: '🎨', id: 'contrast' },
-        { name: '키보드 접근성', field: 'keyboard', icon: '⌨️', id: 'keyboard' }
-    ];
+    // 동적 메타데이터 사용 (백엔드에서 제공)
+    let tests = result.scanner_metadata || [];
+
+    // 메타데이터가 없는 경우 기본값 사용 (하위 호환성)
+    if (tests.length === 0) {
+        tests = [
+            { name: '대체 텍스트', field: 'alt_text_missing', icon: '🖼️', id: 'alt_text' },
+            { name: '폼 레이블', field: 'form_labels', icon: '📝', id: 'form_labels' },
+            { name: '제목 구조', field: 'heading_structure', icon: '📑', id: 'heading_structure' },
+            { name: 'ARIA 속성', field: 'aria', icon: '♿', id: 'aria' },
+            { name: '색상 대비', field: 'contrast', icon: '🎨', id: 'contrast' },
+            { name: '키보드 접근성', field: 'keyboard', icon: '⌨️', id: 'keyboard' }
+        ];
+    }
 
     tests.forEach(test => {
-        const testData = result[test.field];
-        if (!testData) return;
+        const fieldName = test.field || test.id;
+        const testData = result[fieldName];
+        if (!testData && testData !== 0 && testData !== false) return;
 
         const item = createTestItem(test, testData, 'accessibility', result);
         container.appendChild(item);
@@ -844,5 +869,343 @@ style.textContent = `
             opacity: 0;
         }
     }
+
+    .detail-loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 40px;
+        color: #666;
+    }
+
+    .detail-error {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 40px;
+        color: #ef4444;
+    }
 `;
 document.head.appendChild(style);
+
+// ===== New functions for Summary API and Lazy Loading =====
+
+// Cache for scanner details
+const detailCache = {};
+
+/**
+ * Display summary results (lightweight version)
+ */
+function displaySummaryResults(data) {
+    // Hide loading, show results
+    document.getElementById('loadingSection').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'block';
+
+    // Display scan info
+    if (data.url) {
+        document.getElementById('scanUrl').textContent = data.url;
+    }
+    if (data.created_at) {
+        const date = new Date(data.created_at);
+        document.getElementById('scanTime').textContent = date.toLocaleString('ko-KR');
+    }
+
+    // Display security summary
+    if (data.security_summary) {
+        const summary = data.security_summary;
+        document.getElementById('securityScore').textContent = `${summary.overall_score || 0}점`;
+        displaySecuritySummary(summary);
+    } else {
+        document.getElementById('securityScore').textContent = '-';
+    }
+
+    // Display standards summary
+    if (data.standards_summary) {
+        const summary = data.standards_summary;
+        document.getElementById('standardsScore').textContent = `${summary.overall_score || 0}점`;
+        displayStandardsSummary(summary);
+    } else {
+        document.getElementById('standardsScore').textContent = '-';
+        document.getElementById('standardsCategory').style.display = 'none';
+    }
+
+    // Display accessibility summary
+    if (data.accessibility_summary) {
+        const summary = data.accessibility_summary;
+        document.getElementById('accessibilityScore').textContent = `${summary.overall_score || 0}점`;
+        displayAccessibilitySummary(summary);
+    } else {
+        document.getElementById('accessibilityScore').textContent = '-';
+        document.getElementById('accessibilityCategory').style.display = 'none';
+    }
+}
+
+/**
+ * Display security summary (scanners list only)
+ */
+function displaySecuritySummary(summary) {
+    const container = document.getElementById('securityTestList');
+    container.innerHTML = '';
+
+    // Use scanners list from summary
+    const scanners = summary.scanners || [];
+
+    scanners.forEach(scanner => {
+        const item = createSummaryTestItem(scanner, 'security');
+        container.appendChild(item);
+    });
+}
+
+/**
+ * Display standards summary (scanners list only)
+ */
+function displayStandardsSummary(summary) {
+    const container = document.getElementById('standardsTestList');
+    container.innerHTML = '';
+
+    // Use scanners list from summary
+    const scanners = summary.scanners || [];
+
+    scanners.forEach(scanner => {
+        const item = createSummaryTestItem(scanner, 'standards');
+        container.appendChild(item);
+    });
+}
+
+/**
+ * Display accessibility summary (scanners list only)
+ */
+function displayAccessibilitySummary(summary) {
+    const container = document.getElementById('accessibilityTestList');
+    container.innerHTML = '';
+
+    // Use scanners list from summary
+    const scanners = summary.scanners || [];
+
+    scanners.forEach(scanner => {
+        const item = createSummaryTestItem(scanner, 'accessibility');
+        container.appendChild(item);
+    });
+}
+
+/**
+ * Create summary test item (lightweight version)
+ */
+function createSummaryTestItem(scanner, category) {
+    const item = document.createElement('div');
+    item.className = 'test-item';
+    item.dataset.testId = scanner.id;
+    item.dataset.category = category;
+
+    // Set badge based on status
+    let badgeClass = 'pass';
+    let badgeText = '통과';
+
+    if (scanner.status === 'fail') {
+        if (scanner.severity === 'critical') {
+            badgeClass = 'critical';
+            badgeText = `치명적 ${scanner.count}개`;
+        } else if (scanner.severity === 'high') {
+            badgeClass = 'danger';
+            badgeText = `높음 ${scanner.count}개`;
+        } else if (scanner.severity === 'medium') {
+            badgeClass = 'warning';
+            badgeText = `중간 ${scanner.count}개`;
+        } else {
+            badgeClass = 'info';
+            badgeText = `낮음 ${scanner.count}개`;
+        }
+    }
+
+    item.innerHTML = `
+        <div class="test-item-left">
+            <span class="test-icon">${scanner.icon || '🔍'}</span>
+            <span class="test-name">${scanner.name}</span>
+        </div>
+        <div class="test-item-right">
+            <span class="test-badge ${badgeClass}">${badgeText}</span>
+        </div>
+    `;
+
+    // Click event for loading details
+    item.addEventListener('click', () => {
+        selectTestItem(item);
+        loadAndDisplayScannerDetail(scanner.id);
+    });
+
+    return item;
+}
+
+/**
+ * Setup lazy loading for detail information
+ */
+function setupLazyLoading() {
+    // Lazy loading 설정 완료
+}
+
+/**
+ * Load and display scanner detail (Lazy Loading)
+ */
+async function loadAndDisplayScannerDetail(scannerId) {
+    // Check cache first
+    if (detailCache[scannerId]) {
+        displayEnhancedDetailedInfo(detailCache[scannerId]);
+        return;
+    }
+
+    try {
+        // Show loading state
+        const detailDisplay = document.getElementById('detailDisplay');
+        if (detailDisplay) {
+            detailDisplay.innerHTML = '<div class="detail-loading">🔍 상세 정보를 불러오는 중...</div>';
+        }
+
+        // Call individual scanner detail API
+        const response = await fetch(`${API_BASE_URL}/scan/${currentScanId}/scanner/?scanner_id=${scannerId}`);
+
+        if (!response.ok) {
+            throw new Error('상세 정보를 불러올 수 없습니다.');
+        }
+
+        const detailData = await response.json();
+
+        // Save to cache
+        detailCache[scannerId] = detailData;
+
+        // Display enhanced detailed info
+        displayEnhancedDetailedInfo(detailData);
+
+    } catch (error) {
+        console.error('Detail loading error:', error);
+        const detailDisplay = document.getElementById('detailDisplay');
+        if (detailDisplay) {
+            detailDisplay.innerHTML = '<div class="detail-error">⚠️ 상세 정보를 불러올 수 없습니다.</div>';
+        }
+    }
+}
+
+/**
+ * Display enhanced detailed information (with OWASP, CWE, guide, etc.)
+ */
+function displayEnhancedDetailedInfo(detail) {
+    const container = document.getElementById('detailDisplay');
+    if (!container) return;
+
+    // Build enhanced HTML
+    let html = `
+        <div class="detail-header">
+            <h2>${detail.icon || '🔍'} ${detail.name || detail.scanner_id}</h2>
+            <div class="detail-badges">
+                <span class="detail-status ${detail.status || 'unknown'}">${detail.status === 'pass' ? '✅ 통과' : '⚠️ 이슈 발견'}</span>
+                ${detail.severity && detail.status !== 'pass' ? `<span class="severity-badge ${detail.severity}">${detail.severity.toUpperCase()}</span>` : ''}
+            </div>
+        </div>
+
+        <div class="detail-content">
+    `;
+
+    // Description
+    if (detail.description || detail.guide?.description) {
+        html += `
+            <div class="detail-description">
+                <p>${detail.description || detail.guide.description}</p>
+            </div>
+        `;
+    }
+
+    // Statistics
+    if (detail.statistics) {
+        const stats = detail.statistics;
+        html += `
+            <div class="detail-statistics">
+                <h3>📊 검사 통계</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">총 취약점</span>
+                        <span class="stat-value">${stats.total_vulnerabilities || 0}</span>
+                    </div>
+                    ${stats.critical_count ? `<div class="stat-item">
+                        <span class="stat-label">치명적</span>
+                        <span class="stat-value critical">${stats.critical_count}</span>
+                    </div>` : ''}
+                    ${stats.high_count ? `<div class="stat-item">
+                        <span class="stat-label">높음</span>
+                        <span class="stat-value high">${stats.high_count}</span>
+                    </div>` : ''}
+                    ${stats.medium_count ? `<div class="stat-item">
+                        <span class="stat-label">중간</span>
+                        <span class="stat-value medium">${stats.medium_count}</span>
+                    </div>` : ''}
+                    ${stats.low_count ? `<div class="stat-item">
+                        <span class="stat-label">낮음</span>
+                        <span class="stat-value low">${stats.low_count}</span>
+                    </div>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    // Vulnerabilities list
+    if (detail.vulnerabilities && detail.vulnerabilities.length > 0) {
+        html += renderVulnerabilities(detail.vulnerabilities);
+    }
+
+    // Guide - Remediation steps
+    if (detail.guide?.remediation?.steps) {
+        html += `
+            <div class="detail-remediation">
+                <h3>✅ 권장 조치사항</h3>
+                <ol>
+                    ${detail.guide.remediation.steps.map(step => `<li>${step}</li>`).join('')}
+                </ol>
+            </div>
+        `;
+    }
+
+    // OWASP & CWE information
+    if (detail.guide?.owasp || detail.guide?.cwe) {
+        html += `
+            <div class="detail-compliance">
+                <h3>📋 표준 매핑</h3>
+                <div class="compliance-tags">
+                    ${detail.guide?.owasp ? detail.guide.owasp.map(o => `<span class="owasp-tag">${o}</span>`).join('') : ''}
+                    ${detail.guide?.cwe ? detail.guide.cwe.map(c => `<span class="cwe-tag">${c}</span>`).join('') : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    // References
+    if (detail.guide?.references && detail.guide.references.length > 0) {
+        html += `
+            <div class="detail-references">
+                <h3>📚 참고 자료</h3>
+                <ul>
+                    ${detail.guide.references.map(ref => `<li><a href="${ref}" target="_blank">${ref}</a></li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    // For passed tests - show best practices
+    if (detail.status === 'pass') {
+        html += `
+            <div class="detail-passed">
+                <h3>✅ 검사 결과</h3>
+                <p>이 항목의 모든 보안 검사를 통과했습니다.</p>
+                ${detail.guide?.remediation?.steps ? `
+                    <div class="best-practices">
+                        <h4>추가 개선 권장사항:</h4>
+                        <ul>
+                            ${detail.guide.remediation.steps.slice(0, 3).map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    html += '</div>'; // Close detail-content
+
+    container.innerHTML = html;
+}

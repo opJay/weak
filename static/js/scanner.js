@@ -68,7 +68,6 @@ async function handleScanSubmit(e) {
     // Use setTimeout to ensure UI updates before API call
     setTimeout(async () => {
         try {
-            console.log('Starting API call...');
 
             // Call API
             const response = await fetch(`${API_BASE_URL}/scan/start/`, {
@@ -79,7 +78,6 @@ async function handleScanSubmit(e) {
                 body: JSON.stringify(requestData)
             });
 
-            console.log('API response received');
             const data = await response.json();
 
             if (!response.ok) {
@@ -101,7 +99,6 @@ async function handleScanSubmit(e) {
 
             // Store scan ID and start polling
             currentScanId = data.scan_id;
-            console.log('Scan ID:', currentScanId);
 
             // Start polling for status
             startStatusPolling();
@@ -120,8 +117,6 @@ async function handleScanSubmit(e) {
  * Show progress section (Step 2)
  */
 function showProgressSection() {
-    console.log('Showing progress section - Step 2');
-
     // Hide all steps first
     document.querySelectorAll('.wizard-step').forEach(step => {
         step.classList.remove('active');
@@ -133,7 +128,6 @@ function showProgressSection() {
     if (step2) {
         step2.classList.add('active');
         step2.style.display = 'block';
-        console.log('Step 2 is now visible');
     } else {
         console.error('Step 2 element not found!');
     }
@@ -160,7 +154,6 @@ function startStatusPolling() {
         clearInterval(statusPollInterval);
     }
 
-    console.log('Starting status polling...');
 
     // Wait a bit before first poll to ensure UI is visible
     setTimeout(() => {
@@ -181,7 +174,6 @@ async function updateScanStatus() {
         const response = await fetch(`${API_BASE_URL}/scan/${currentScanId}/status/`);
         const data = await response.json();
 
-        console.log('Scan status:', data.status, 'Progress:', data.progress + '%');
 
         // Update progress bar
         updateProgressBar(data.progress);
@@ -191,7 +183,6 @@ async function updateScanStatus() {
 
         // Check if completed
         if (data.status === 'completed') {
-            console.log('Scan completed! Loading results...');
             clearInterval(statusPollInterval);
             await loadScanResults();
         } else if (data.status === 'failed') {
@@ -200,7 +191,6 @@ async function updateScanStatus() {
             alert(`스캔 실패: ${data.error_message || '알 수 없는 오류'}`);
             resetToScanForm();
         } else {
-            console.log('Scan still running...');
         }
 
     } catch (error) {
@@ -261,7 +251,6 @@ async function loadScanResults() {
  * Display scan results
  */
 function displayResults(data) {
-    console.log('Displaying results - Step 3');
 
     // Hide all steps first
     document.querySelectorAll('.wizard-step').forEach(step => {
@@ -274,7 +263,6 @@ function displayResults(data) {
     if (step3) {
         step3.classList.add('active');
         step3.style.display = 'block';
-        console.log('Step 3 is now visible');
     } else {
         console.error('Step 3 element not found!');
     }
@@ -1591,7 +1579,6 @@ function switchTab(tabName) {
  * Reset to scan form (Step 1)
  */
 function resetToScanForm() {
-    console.log('Resetting to Step 1');
 
     // Clear scan ID
     currentScanId = null;
@@ -1615,7 +1602,6 @@ function resetToScanForm() {
     if (step1) {
         step1.classList.add('active');
         step1.style.display = 'block';
-        console.log('Step 1 is now visible');
     }
 
     // Re-enable button
@@ -1722,8 +1708,6 @@ function getSeverityLabel(severity) {
  * Go to specific wizard step
  */
 function goToStep(stepNumber) {
-    console.log(`Going to step ${stepNumber}`);
-
     // Hide all steps first
     document.querySelectorAll('.wizard-step').forEach(step => {
         step.classList.remove('active');
@@ -1735,7 +1719,6 @@ function goToStep(stepNumber) {
     if (targetStep) {
         targetStep.classList.add('active');
         targetStep.style.display = 'block';
-        console.log(`Step ${stepNumber} is now visible`);
     } else {
         console.error(`Step ${stepNumber} element not found!`);
     }

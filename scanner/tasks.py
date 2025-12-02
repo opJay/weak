@@ -1612,9 +1612,9 @@ def scan_standards(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
         seo_data = check_seo_advanced(soup, scan_request.url, response)
-        standards_result.seo_score = seo_data['score']
-        standards_result.seo_issues = seo_data['issues']
-        standards_result.meta_tags = seo_data['meta_tags']
+        standards_result.seo_score = seo_data['overall_score']
+        standards_result.seo_issues = seo_data['vulnerabilities']
+        standards_result.meta_tags = seo_data.get('meta_tags', {})
 
         # 메타데이터 수집
         if meta := collect_scanner_metadata(check_seo_advanced, seo_data):
@@ -1626,10 +1626,10 @@ def scan_standards(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
         html_validation = check_html_structure(soup, response.text)
-        standards_result.html_valid = html_validation['valid']
-        standards_result.html_errors = html_validation['errors']
-        standards_result.html_warnings = html_validation['warnings']
-        standards_result.html_error_count = len(html_validation['errors'])
+        standards_result.html_valid = html_validation['overall_score'] >= 70
+        standards_result.html_errors = html_validation['vulnerabilities']
+        standards_result.html_warnings = []  # 이제 vulnerabilities로 통합됨
+        standards_result.html_error_count = len(html_validation['vulnerabilities'])
 
         # 메타데이터 수집
         if meta := collect_scanner_metadata(check_html_structure, html_validation):
@@ -1641,10 +1641,10 @@ def scan_standards(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
         css_data = check_css_resources(soup, scan_request.url)
-        standards_result.css_valid = css_data['valid']
-        standards_result.css_errors = css_data['errors']
-        standards_result.css_warnings = css_data['warnings']
-        standards_result.css_error_count = len(css_data['errors'])
+        standards_result.css_valid = css_data['overall_score'] >= 70
+        standards_result.css_errors = css_data['vulnerabilities']
+        standards_result.css_warnings = []  # 이제 vulnerabilities로 통합됨
+        standards_result.css_error_count = len(css_data['vulnerabilities'])
 
         # 메타데이터 수집
         if meta := collect_scanner_metadata(check_css_resources, css_data):
@@ -1656,9 +1656,9 @@ def scan_standards(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
         js_data = check_javascript(soup, scan_request.url)
-        standards_result.js_errors = js_data['errors']
-        standards_result.js_console_logs = js_data['console_logs']
-        standards_result.js_error_count = len(js_data['errors'])
+        standards_result.js_errors = js_data['vulnerabilities']
+        standards_result.js_console_logs = []  # 이제 vulnerabilities로 통합됨
+        standards_result.js_error_count = len(js_data['vulnerabilities'])
 
         # 메타데이터 수집
         if meta := collect_scanner_metadata(check_javascript, js_data):
@@ -1732,23 +1732,27 @@ def scan_accessibility(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        accessibility_issues = check_basic_accessibility(soup, scan_request.url)
+        accessibility_data = check_basic_accessibility(soup, scan_request.url)
 
         # 메타데이터 수집
-        if meta := collect_scanner_metadata(check_basic_accessibility, accessibility_issues):
+        if meta := collect_scanner_metadata(check_basic_accessibility, accessibility_data):
             scanner_metadata.append(meta)
 
-        accessibility_result.alt_text_missing = accessibility_issues['alt_text_missing']
-        accessibility_result.form_labels = accessibility_issues['form_labels']
-        accessibility_result.heading_structure = accessibility_issues['heading_structure']
+        # 데이터 저장 (이전 형식과 호환)
+        alt_text_issues = [v for v in accessibility_data['vulnerabilities'] if v.get('element') == 'img']
+        form_label_issues = [v for v in accessibility_data['vulnerabilities'] if v.get('element') == 'input']
+
+        accessibility_result.alt_text_missing = alt_text_issues
+        accessibility_result.form_labels = form_label_issues
+        accessibility_result.heading_structure = accessibility_data['statistics'].get('heading_structure', {})
 
         # 통계
-        accessibility_result.total_issues = len(accessibility_issues['alt_text_missing']) + len(accessibility_issues['form_labels'])
-        accessibility_result.critical_issues = len([i for i in accessibility_issues['alt_text_missing'] if i.get('severity') == 'critical'])
+        accessibility_result.total_issues = len(accessibility_data['vulnerabilities'])
+        accessibility_result.critical_issues = len([i for i in accessibility_data['vulnerabilities'] if i.get('severity') == 'critical'])
 
-        # 점수 및 등급 계산 (임시)
-        accessibility_result.overall_score = calculate_accessibility_score(accessibility_result)
-        accessibility_result.wcag_level = determine_wcag_level(accessibility_result.overall_score)
+        # 점수 및 등급 계산 (새 데이터 형식 사용)
+        accessibility_result.overall_score = accessibility_data['overall_score']
+        accessibility_result.wcag_level = determine_wcag_level(accessibility_data['overall_score'])
 
         # 스캐너 메타데이터 저장
         accessibility_result.scanner_metadata = scanner_metadata
@@ -1887,49 +1891,81 @@ def check_seo(soup, url):
 
 def check_basic_accessibility(soup, url):
     """기본 접근성 검사"""
-    issues = {
-        'alt_text_missing': [],
-        'form_labels': [],
-        'heading_structure': {}
-    }
+    vulnerabilities = []
+    score = 100
+    statistics = {}
 
     # 이미지 alt 속성
     images = soup.find_all('img')
+    images_without_alt = 0
     for idx, img in enumerate(images):
         if not img.get('alt'):
-            issues['alt_text_missing'].append({
+            images_without_alt += 1
+            vulnerabilities.append({
                 'element': 'img',
                 'src': img.get('src', 'unknown'),
                 'position': idx + 1,
-                'severity': 'serious',
+                'severity': 'medium',
                 'message': 'Alt 속성이 없습니다.'
             })
+            score -= 2  # 이미지당 2점 감점
 
     # 폼 레이블
     inputs = soup.find_all('input', type=['text', 'email', 'password', 'number'])
+    inputs_without_label = 0
     for idx, input_elem in enumerate(inputs):
         input_id = input_elem.get('id')
         if input_id:
             label = soup.find('label', attrs={'for': input_id})
             if not label:
-                issues['form_labels'].append({
+                inputs_without_label += 1
+                vulnerabilities.append({
                     'element': 'input',
                     'type': input_elem.get('type'),
                     'id': input_id,
-                    'severity': 'serious',
+                    'severity': 'high',
                     'message': '연결된 label이 없습니다.'
                 })
+                score -= 5  # 폼 입력당 5점 감점
 
     # 제목 구조
     headings = soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
-    issues['heading_structure'] = {
-        'total': len(headings),
-        'h1_count': len(soup.find_all('h1')),
-        'h2_count': len(soup.find_all('h2')),
-        'h3_count': len(soup.find_all('h3')),
+    h1_count = len(soup.find_all('h1'))
+
+    if h1_count == 0:
+        vulnerabilities.append({
+            'element': 'heading',
+            'severity': 'high',
+            'message': 'H1 제목이 없습니다. 페이지 구조에 H1이 필요합니다.'
+        })
+        score -= 10
+    elif h1_count > 1:
+        vulnerabilities.append({
+            'element': 'heading',
+            'severity': 'low',
+            'message': f'H1 제목이 {h1_count}개 있습니다. 페이지당 1개 권장.'
+        })
+        score -= 5
+
+    # 통계 정보
+    statistics = {
+        'total_images': len(images),
+        'images_without_alt': images_without_alt,
+        'total_inputs': len(inputs),
+        'inputs_without_label': inputs_without_label,
+        'heading_structure': {
+            'total': len(headings),
+            'h1_count': h1_count,
+            'h2_count': len(soup.find_all('h2')),
+            'h3_count': len(soup.find_all('h3')),
+        }
     }
 
-    return issues
+    return {
+        'overall_score': max(0, score),
+        'vulnerabilities': vulnerabilities,
+        'statistics': statistics
+    }
 
 # 기본 접근성 스캐너 메타데이터
 check_basic_accessibility.metadata = {

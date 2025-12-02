@@ -7,69 +7,115 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 
 
+def generate_standards_metadata():
+    """웹 표준 검사 메타데이터 생성"""
+    return [
+        {
+            'id': 'html_validation',
+            'name': 'HTML 유효성 검사',
+            'icon': '📄',
+            'field': 'html_errors',
+            'description': 'HTML 마크업 유효성 검증',
+            'weight': 2
+        },
+        {
+            'id': 'css_validation',
+            'name': 'CSS 유효성 검사',
+            'icon': '🎨',
+            'field': 'css_errors',
+            'description': 'CSS 스타일시트 유효성 검증',
+            'weight': 2
+        },
+        {
+            'id': 'js_validation',
+            'name': 'JavaScript 검사',
+            'icon': '⚙️',
+            'field': 'js_errors',
+            'description': 'JavaScript 오류 및 경고 검사',
+            'weight': 2
+        },
+        {
+            'id': 'seo_check',
+            'name': 'SEO 최적화',
+            'icon': '🔍',
+            'field': 'seo_issues',
+            'description': '검색 엔진 최적화 검사',
+            'weight': 1
+        },
+        {
+            'id': 'performance_check',
+            'name': '성능 검사',
+            'icon': '⚡',
+            'field': 'page_performance',
+            'description': '페이지 로드 성능 측정',
+            'weight': 1
+        }
+    ]
+
+
 def check_seo_advanced(soup, url, response):
     """고급 SEO 검사"""
-    issues = []
+    vulnerabilities = []
     meta_tags = {}
     score = 100
 
     # 1. Title 태그 검사
     title = soup.find('title')
     if not title or not title.string:
-        issues.append({'type': 'title', 'severity': 'critical', 'message': 'Title 태그가 없거나 비어있습니다.'})
+        vulnerabilities.append({'type': 'title', 'severity': 'critical', 'message': 'Title 태그가 없거나 비어있습니다.'})
         score -= 20
     else:
         title_text = title.string.strip()
         meta_tags['title'] = title_text
 
         if len(title_text) < 10:
-            issues.append({'type': 'title', 'severity': 'high', 'message': f'Title이 너무 짧습니다 ({len(title_text)}자). 10자 이상 권장.'})
+            vulnerabilities.append({'type': 'title', 'severity': 'high', 'message': f'Title이 너무 짧습니다 ({len(title_text)}자). 10자 이상 권장.'})
             score -= 10
         elif len(title_text) > 70:
-            issues.append({'type': 'title', 'severity': 'medium', 'message': f'Title이 너무 깁니다 ({len(title_text)}자). 70자 이하 권장.'})
+            vulnerabilities.append({'type': 'title', 'severity': 'medium', 'message': f'Title이 너무 깁니다 ({len(title_text)}자). 70자 이하 권장.'})
             score -= 5
 
     # 2. Meta Description
     meta_desc = soup.find('meta', attrs={'name': 'description'})
     if not meta_desc or not meta_desc.get('content'):
-        issues.append({'type': 'meta_description', 'severity': 'high', 'message': 'Meta description이 없습니다.'})
+        vulnerabilities.append({'type': 'meta_description', 'severity': 'high', 'message': 'Meta description이 없습니다.'})
         score -= 15
     else:
         desc_text = meta_desc.get('content', '').strip()
         meta_tags['description'] = desc_text
 
         if len(desc_text) < 50:
-            issues.append({'type': 'meta_description', 'severity': 'medium', 'message': f'Meta description이 너무 짧습니다 ({len(desc_text)}자). 50~160자 권장.'})
+            vulnerabilities.append({'type': 'meta_description', 'severity': 'medium', 'message': f'Meta description이 너무 짧습니다 ({len(desc_text)}자). 50~160자 권장.'})
             score -= 5
         elif len(desc_text) > 160:
-            issues.append({'type': 'meta_description', 'severity': 'low', 'message': f'Meta description이 너무 깁니다 ({len(desc_text)}자). 160자 이하 권장.'})
+            vulnerabilities.append({'type': 'meta_description', 'severity': 'low', 'message': f'Meta description이 너무 깁니다 ({len(desc_text)}자). 160자 이하 권장.'})
             score -= 3
 
     # 3. H1 태그 검사
     h1_tags = soup.find_all('h1')
     if not h1_tags:
-        issues.append({'type': 'h1', 'severity': 'high', 'message': 'H1 태그가 없습니다.'})
+        vulnerabilities.append({'type': 'h1', 'severity': 'high', 'message': 'H1 태그가 없습니다.'})
         score -= 10
     elif len(h1_tags) > 1:
-        issues.append({'type': 'h1', 'severity': 'medium', 'message': f'H1 태그가 {len(h1_tags)}개입니다. 1개 권장.'})
+        vulnerabilities.append({'type': 'h1', 'severity': 'medium', 'message': f'H1 태그가 {len(h1_tags)}개입니다. 1개 권장.'})
         score -= 5
     else:
         h1_text = h1_tags[0].get_text().strip()
         if len(h1_text) < 10:
-            issues.append({'type': 'h1', 'severity': 'low', 'message': 'H1 텍스트가 너무 짧습니다.'})
+            vulnerabilities.append({'type': 'h1', 'severity': 'low', 'message': 'H1 텍스트가 너무 짧습니다.'})
             score -= 3
 
     # 4. 제목 구조 검사 (H1-H6)
     heading_structure = check_heading_hierarchy(soup)
     if not heading_structure['valid']:
-        issues.extend(heading_structure['issues'])
+        vulnerabilities.extend(heading_structure['issues'])
         score -= heading_structure['score_penalty']
 
     # 5. 이미지 Alt 속성
     images = soup.find_all('img')
     images_without_alt = [img for img in images if not img.get('alt')]
     if images_without_alt:
-        issues.append({
+        vulnerabilities.append({
             'type': 'img_alt',
             'severity': 'medium',
             'message': f'{len(images_without_alt)}개의 이미지에 alt 속성이 없습니다.',
@@ -81,7 +127,7 @@ def check_seo_advanced(soup, url, response):
     # 6. 언어 속성 (lang)
     html_tag = soup.find('html')
     if not html_tag or not html_tag.get('lang'):
-        issues.append({'type': 'lang', 'severity': 'medium', 'message': '<html> 태그에 lang 속성이 없습니다.'})
+        vulnerabilities.append({'type': 'lang', 'severity': 'medium', 'message': '<html> 태그에 lang 속성이 없습니다.'})
         score -= 5
 
     # 7. Canonical URL
@@ -89,7 +135,7 @@ def check_seo_advanced(soup, url, response):
     if canonical:
         meta_tags['canonical'] = canonical.get('href')
     else:
-        issues.append({'type': 'canonical', 'severity': 'low', 'message': 'Canonical URL이 설정되지 않았습니다.'})
+        vulnerabilities.append({'type': 'canonical', 'severity': 'low', 'message': 'Canonical URL이 설정되지 않았습니다.'})
         score -= 3
 
     # 8. Meta Robots
@@ -100,7 +146,7 @@ def check_seo_advanced(soup, url, response):
     # 9. Viewport Meta 태그 (모바일 최적화)
     viewport = soup.find('meta', attrs={'name': 'viewport'})
     if not viewport:
-        issues.append({'type': 'viewport', 'severity': 'high', 'message': 'Viewport meta 태그가 없습니다. 모바일 최적화 필요.'})
+        vulnerabilities.append({'type': 'viewport', 'severity': 'high', 'message': 'Viewport meta 태그가 없습니다. 모바일 최적화 필요.'})
         score -= 10
     else:
         meta_tags['viewport'] = viewport.get('content')
@@ -110,49 +156,48 @@ def check_seo_advanced(soup, url, response):
     if not charset:
         charset_alt = soup.find('meta', attrs={'http-equiv': 'Content-Type'})
         if not charset_alt:
-            issues.append({'type': 'charset', 'severity': 'medium', 'message': '문자 인코딩이 명시되지 않았습니다.'})
+            vulnerabilities.append({'type': 'charset', 'severity': 'medium', 'message': '문자 인코딩이 명시되지 않았습니다.'})
             score -= 5
 
     # 11. Open Graph 태그
     og_tags = check_open_graph(soup)
     meta_tags['og'] = og_tags['tags']
     if og_tags['issues']:
-        issues.extend(og_tags['issues'])
+        vulnerabilities.extend(og_tags['issues'])
         score -= og_tags['score_penalty']
 
     # 12. Twitter Card
     twitter_tags = check_twitter_card(soup)
     meta_tags['twitter'] = twitter_tags['tags']
     if twitter_tags['issues']:
-        issues.extend(twitter_tags['issues'])
+        vulnerabilities.extend(twitter_tags['issues'])
 
     # 13. Favicon
     favicon = soup.find('link', {'rel': 'icon'}) or soup.find('link', {'rel': 'shortcut icon'})
     if not favicon:
-        issues.append({'type': 'favicon', 'severity': 'low', 'message': 'Favicon이 설정되지 않았습니다.'})
+        vulnerabilities.append({'type': 'favicon', 'severity': 'low', 'message': 'Favicon이 설정되지 않았습니다.'})
         score -= 2
 
     # 14. 외부 리소스 (External Resources)
     external_resources = check_external_resources(soup, url)
     if external_resources['issues']:
-        issues.extend(external_resources['issues'])
+        vulnerabilities.extend(external_resources['issues'])
         score -= external_resources['score_penalty']
 
     return {
-        'score': max(0, score),
-        'issues': issues,
+        'overall_score': max(0, score),
+        'vulnerabilities': vulnerabilities,
         'meta_tags': meta_tags
     }
 
 # SEO 스캐너 메타데이터
 check_seo_advanced.metadata = {
-    'id': 'seo',
-    'name': 'SEO 검사',
+    'id': 'seo_check',
+    'name': 'SEO 최적화',
     'icon': '🔍',
-    'description': '검색 엔진 최적화 검증',
-    'weight': 2,
-    'field': 'seo_issues',
-    'score_field': 'seo_score'
+    'description': '검색 엔진 최적화 검사',
+    'weight': 1,
+    'field': 'seo_issues'
 }
 
 
@@ -306,77 +351,91 @@ def check_external_resources(soup, base_url):
 
 def check_html_structure(soup, html_text):
     """HTML 구조 검증"""
-    errors = []
-    warnings = []
+    vulnerabilities = []
+    score = 100
 
     # 1. DOCTYPE 선언
     if not html_text.strip().lower().startswith('<!doctype'):
-        errors.append({
+        vulnerabilities.append({
             'type': 'doctype',
+            'severity': 'high',
             'message': 'DOCTYPE 선언이 없습니다.',
             'line': 1
         })
+        score -= 10
 
     # 2. <html> 태그
     html_tag = soup.find('html')
     if not html_tag:
-        errors.append({
+        vulnerabilities.append({
             'type': 'html_tag',
+            'severity': 'critical',
             'message': '<html> 태그가 없습니다.',
             'line': None
         })
+        score -= 15
 
     # 3. <head> 태그
     head_tag = soup.find('head')
     if not head_tag:
-        errors.append({
+        vulnerabilities.append({
             'type': 'head_tag',
+            'severity': 'high',
             'message': '<head> 태그가 없습니다.',
             'line': None
         })
+        score -= 10
 
     # 4. <body> 태그
     body_tag = soup.find('body')
     if not body_tag:
-        errors.append({
+        vulnerabilities.append({
             'type': 'body_tag',
+            'severity': 'high',
             'message': '<body> 태그가 없습니다.',
             'line': None
         })
+        score -= 10
 
     # 5. 중복 ID 검사
     duplicate_ids = check_duplicate_ids(soup)
     if duplicate_ids:
         for dup_id in duplicate_ids:
-            errors.append({
+            vulnerabilities.append({
                 'type': 'duplicate_id',
+                'severity': 'medium',
                 'message': f'ID "{dup_id}"가 중복 사용되었습니다.',
                 'line': None
             })
+            score -= 5
 
     # 6. 폼 검증
     form_issues = check_forms(soup)
-    warnings.extend(form_issues)
+    for issue in form_issues:
+        issue['severity'] = 'low'
+        vulnerabilities.append(issue)
+        score -= 2
 
     # 7. 깨진 링크 (간단한 검사)
     broken_links = check_broken_links_simple(soup)
-    warnings.extend(broken_links)
+    for link in broken_links:
+        link['severity'] = 'low'
+        vulnerabilities.append(link)
+        score -= 1
 
     return {
-        'valid': len(errors) == 0,
-        'errors': errors,
-        'warnings': warnings
+        'overall_score': max(0, score),
+        'vulnerabilities': vulnerabilities
     }
 
 # HTML 구조 검증 메타데이터
 check_html_structure.metadata = {
     'id': 'html_validation',
-    'name': 'HTML 구조 검증',
+    'name': 'HTML 유효성 검사',
     'icon': '📄',
-    'description': 'HTML 문법 및 구조 검증',
-    'weight': 2,
     'field': 'html_errors',
-    'count_field': 'html_error_count'
+    'description': 'HTML 마크업 유효성 검증',
+    'weight': 2
 }
 
 
@@ -442,47 +501,49 @@ def check_broken_links_simple(soup):
 
 def check_css_resources(soup, base_url):
     """CSS 리소스 검사"""
-    errors = []
-    warnings = []
+    vulnerabilities = []
+    score = 100
 
     css_links = soup.find_all('link', {'rel': 'stylesheet'})
 
     if len(css_links) > 10:
-        warnings.append({
+        vulnerabilities.append({
             'type': 'css_count',
+            'severity': 'low',
             'message': f'CSS 파일이 {len(css_links)}개입니다. 병합 권장 (성능 최적화).'
         })
+        score -= 5
 
     # 인라인 스타일 검사
     inline_styles = soup.find_all(style=True)
     if len(inline_styles) > 20:
-        warnings.append({
+        vulnerabilities.append({
             'type': 'inline_styles',
+            'severity': 'low',
             'message': f'인라인 스타일이 {len(inline_styles)}개 있습니다. CSS 파일 사용 권장.'
         })
+        score -= 5
 
     return {
-        'valid': len(errors) == 0,
-        'errors': errors,
-        'warnings': warnings
+        'overall_score': max(0, score),
+        'vulnerabilities': vulnerabilities
     }
 
 # CSS 분석 메타데이터
 check_css_resources.metadata = {
-    'id': 'css_analysis',
-    'name': 'CSS 분석',
+    'id': 'css_validation',
+    'name': 'CSS 유효성 검사',
     'icon': '🎨',
-    'description': 'CSS 문법 및 성능 분석',
-    'weight': 1.5,
     'field': 'css_errors',
-    'count_field': 'css_error_count'
+    'description': 'CSS 스타일시트 유효성 검증',
+    'weight': 2
 }
 
 
 def check_javascript(soup, base_url):
     """JavaScript 검사"""
-    errors = []
-    console_logs = []
+    vulnerabilities = []
+    score = 100
 
     script_tags = soup.find_all('script')
 
@@ -490,70 +551,61 @@ def check_javascript(soup, base_url):
     inline_scripts = [s for s in script_tags if not s.get('src') and s.string]
 
     if len(inline_scripts) > 10:
-        errors.append({
+        vulnerabilities.append({
             'type': 'inline_scripts',
             'message': f'인라인 스크립트가 {len(inline_scripts)}개 있습니다. 외부 파일 사용 권장.',
             'severity': 'low'
         })
+        score -= 5
 
     # console.log 검사 (프로덕션에서는 제거해야 함)
     for script in inline_scripts:
         if script.string and 'console.log' in script.string:
-            console_logs.append({
+            vulnerabilities.append({
                 'type': 'console_log',
+                'severity': 'low',
                 'message': '인라인 스크립트에 console.log가 있습니다. 프로덕션에서 제거 권장.'
             })
+            score -= 3
             break
 
     # 외부 스크립트
     external_scripts = [s for s in script_tags if s.get('src')]
 
     if len(external_scripts) > 15:
-        errors.append({
+        vulnerabilities.append({
             'type': 'script_count',
             'message': f'외부 JavaScript 파일이 {len(external_scripts)}개입니다. 병합 권장.',
             'severity': 'low'
         })
+        score -= 5
 
     return {
-        'errors': errors,
-        'console_logs': console_logs
+        'overall_score': max(0, score),
+        'vulnerabilities': vulnerabilities
     }
 
 # JavaScript 검사 메타데이터
 check_javascript.metadata = {
-    'id': 'javascript',
+    'id': 'js_validation',
     'name': 'JavaScript 검사',
-    'icon': '📜',
-    'description': 'JavaScript 오류 및 성능 검사',
-    'weight': 1.5,
+    'icon': '⚙️',
     'field': 'js_errors',
-    'count_field': 'js_error_count'
+    'description': 'JavaScript 오류 및 경고 검사',
+    'weight': 2
 }
 
 
 def calculate_standards_score_advanced(standards_result, seo_data, html_validation, css_data, js_data):
     """웹 표준 점수 계산 (고급 버전)"""
-    score = 100
+    # 각 검사의 overall_score를 가중치로 평균 계산
+    scores = [
+        (seo_data.get('overall_score', 100), 0.3),  # SEO 30%
+        (html_validation.get('overall_score', 100), 0.3),  # HTML 30%
+        (css_data.get('overall_score', 100), 0.2),  # CSS 20%
+        (js_data.get('overall_score', 100), 0.2)  # JavaScript 20%
+    ]
 
-    # 1. SEO 점수 (40점)
-    seo_score = seo_data.get('score', 100)
-    score = score - (40 - (seo_score * 0.4))
+    weighted_score = sum(score * weight for score, weight in scores)
 
-    # 2. HTML 유효성 (30점)
-    html_errors = len(html_validation.get('errors', []))
-    html_warnings = len(html_validation.get('warnings', []))
-    score -= min(20, html_errors * 5)
-    score -= min(10, html_warnings * 2)
-
-    # 3. CSS (15점)
-    css_errors = len(css_data.get('errors', []))
-    css_warnings = len(css_data.get('warnings', []))
-    score -= min(10, css_errors * 3)
-    score -= min(5, css_warnings * 1)
-
-    # 4. JavaScript (15점)
-    js_errors = len(js_data.get('errors', []))
-    score -= min(15, js_errors * 3)
-
-    return max(0, min(100, int(score)))
+    return max(0, min(100, int(weighted_score)))
