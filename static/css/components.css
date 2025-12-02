@@ -1,0 +1,615 @@
+/**
+ * components.css
+ * ==================
+ * 공통 컴포넌트 스타일
+ *
+ * 주요 컴포넌트:
+ * - 진행 바 (progress-bar)
+ * - 배지 (badge classes)
+ * - 취약점 카드 (vulnerability-card)
+ * - 스피너 (spinner)
+ * - 테스트 항목 (test-item)
+ * - 상태 아이콘
+ *
+ * 반응형:
+ * - 768px 이하: 모바일 최적화
+ */
+
+/* ===================================
+   Progress Bar Component
+   =================================== */
+
+.progress-bar {
+    width: 100%;
+    height: 24px;
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: var(--spacing-sm);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--info-color));
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: var(--spacing-xs);
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-sm);
+}
+
+.scan-status {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* ===================================
+   Badge Components
+   =================================== */
+
+/* Base Badge Style */
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+/* Test Result Badges */
+.test-badge {
+    padding: 0.25rem 0.625rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.test-badge.pass {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.test-badge.warning {
+    background: #fed7aa;
+    color: #92400e;
+}
+
+.test-badge.fail {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.test-badge.info {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.test-badge.critical {
+    background: #dc2626;
+    color: white;
+}
+
+.test-badge.danger {
+    background: #ea580c;
+    color: white;
+}
+
+/* Severity Badges */
+.severity-badge {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.severity-badge.critical {
+    background: #dc2626;
+    color: white;
+}
+
+.severity-badge.high {
+    background: #ea580c;
+    color: white;
+}
+
+.severity-badge.medium {
+    background: #f59e0b;
+    color: white;
+}
+
+.severity-badge.low {
+    background: #10b981;
+    color: white;
+}
+
+.severity-badge.info {
+    background: #3b82f6;
+    color: white;
+}
+
+/* Step3 Test Badges */
+.step3-test-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.step3-test-badge.pass {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.step3-test-badge.warning {
+    background: #fed7aa;
+    color: #92400e;
+}
+
+.step3-test-badge.fail {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.step3-test-badge.info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Step3 Severity Badges */
+.step3-severity-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.step3-severity-badge.critical {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.step3-severity-badge.high {
+    background-color: #fed7aa;
+    color: #ea580c;
+}
+
+.step3-severity-badge.medium {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.step3-severity-badge.low {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
+
+.step3-severity-badge.info {
+    background-color: #e0e7ff;
+    color: #6366f1;
+}
+
+.step3-severity-badge.success {
+    background-color: #d1fae5;
+    color: #059669;
+}
+
+/* WCAG Badge */
+.step3-wcag-badge {
+    padding: 2px 6px;
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+/* ===================================
+   Vulnerability Card Component
+   =================================== */
+
+.vulnerabilities-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.vulnerability-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    transition: box-shadow 0.2s ease;
+}
+
+.vulnerability-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.vulnerability-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: var(--spacing-sm);
+}
+
+.vulnerability-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.vulnerability-severity {
+    margin-left: var(--spacing-sm);
+}
+
+.vulnerability-severity.critical {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.vulnerability-severity.high {
+    background-color: #fed7aa;
+    color: #92400e;
+}
+
+.vulnerability-severity.medium {
+    background-color: #fef3c7;
+    color: #78350f;
+}
+
+.vulnerability-severity.low {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.vulnerability-meta {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.vulnerability-meta-item {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.vulnerability-meta-item strong {
+    color: var(--text-primary);
+}
+
+.vulnerability-description {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.vulnerability-affected {
+    background-color: var(--bg-secondary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+    word-break: break-all;
+}
+
+.vulnerability-evidence {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    margin-bottom: var(--spacing-sm);
+}
+
+.vulnerability-recommendation {
+    background-color: #d1fae5;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    color: #065f46;
+}
+
+.no-vulnerabilities {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-muted);
+}
+
+.no-vulnerabilities-icon {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+}
+
+/* ===================================
+   Spinner Component
+   =================================== */
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===================================
+   Test Item Component
+   =================================== */
+
+.step3-test-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background-color: var(--bg-primary);
+}
+
+.step3-test-header {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-xs);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.step3-test-header:hover {
+    background-color: var(--bg-hover);
+}
+
+.step3-test-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 1rem;
+    font-size: 1.125rem;
+}
+
+.step3-test-name {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: left;
+}
+
+.step3-test-result {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.step3-expand-icon {
+    display: inline-block;
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+}
+
+.step3-test-details {
+    background-color: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+}
+
+.step3-details-content {
+    padding: var(--spacing-xs);
+}
+
+.step3-detail-item {
+    padding: var(--spacing-sm);
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-xs);
+    border: 1px solid var(--border-color);
+}
+
+.step3-detail-item:last-child {
+    margin-bottom: 0;
+}
+
+.step3-detail-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+}
+
+.step3-detail-desc {
+    color: var(--text-primary);
+    margin-top: var(--spacing-xs);
+    line-height: 1.5;
+    text-align: left;
+}
+
+.step3-detail-location {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.step3-detail-location code {
+    background-color: var(--bg-hover);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.step3-detail-param {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.step3-detail-param code {
+    background-color: #fee2e2;
+    color: #dc2626;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.step3-detail-evidence {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-sm);
+    overflow-x: auto;
+}
+
+.step3-detail-evidence code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.step3-detail-evidence pre {
+    margin: 0;
+}
+
+.step3-detail-recommendation {
+    background-color: #f0fdf4;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    color: #14532d;
+    text-align: left;
+}
+
+.step3-detail-recommendation strong {
+    color: #166534;
+    display: block;
+    margin-bottom: var(--spacing-xs);
+}
+
+.step3-detail-recommendation code {
+    background-color: #bbf7d0;
+    color: #14532d;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.step3-detail-success {
+    background-color: #f0fdf4;
+}
+
+.step3-detail-info {
+    background-color: #f0f9ff;
+}
+
+/* ===================================
+   Results Summary Component
+   =================================== */
+
+.results-summary {
+    background-color: var(--bg-secondary);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-lg);
+}
+
+.summary-item {
+    display: flex;
+    margin-bottom: var(--spacing-xs);
+}
+
+.summary-item:last-child {
+    margin-bottom: 0;
+}
+
+.summary-item .label {
+    font-weight: 600;
+    margin-right: var(--spacing-xs);
+    color: var(--text-secondary);
+    min-width: 100px;
+}
+
+.summary-item .value {
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+/* ===================================
+   Status Icons
+   =================================== */
+
+.status-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+}
+
+.status-icon.present {
+    background-color: var(--success-color);
+}
+
+.status-icon.missing {
+    background-color: var(--danger-color);
+}
+
+/* ===================================
+   Responsive Design
+   =================================== */
+
+@media (max-width: 768px) {
+    .vulnerability-header {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+
+    .vulnerability-severity {
+        margin-left: 0;
+    }
+
+    .step3-detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+    }
+
+    .step3-severity-badge {
+        font-size: 0.7rem;
+    }
+
+    .step3-detail-evidence {
+        padding: var(--spacing-xs);
+        font-size: 0.8rem;
+    }
+
+    .step3-detail-recommendation {
+        padding: var(--spacing-xs);
+        font-size: 0.85rem;
+    }
+}
