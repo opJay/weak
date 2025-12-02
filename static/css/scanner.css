@@ -199,7 +199,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: 1rem;
 }
 
 .detail-title {
@@ -210,7 +210,6 @@
 .detail-description {
     color: var(--text-secondary);
     font-size: 0.9rem;
-    margin-bottom: var(--spacing-xs);
 }
 
 .detail-recommendation {
@@ -970,7 +969,7 @@
 /* 우측 패널 */
 .results-right-panel {
     height: 100%;                    /* 부모 컨테이너 높이 100% */
-    padding: 2rem;                   /* 내부 패딩 */
+    padding: 1rem;                   /* 내부 패딩 */
     background: white;               /* 배경색 */
     overflow-y: auto;                /* 스크롤 가능 */
     box-sizing: border-box;          /* 패딩 포함 크기 계산 */
@@ -1044,7 +1043,6 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 2px solid #e5e7eb;
 }
@@ -1082,7 +1080,8 @@
 .detail-content {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
+    padding-bottom:1rem;
 }
 
 .detail-description {
@@ -1359,7 +1358,6 @@
 
 /* Statistics Grid */
 .detail-statistics {
-    margin: 24px 0;
     padding: 16px;
     background: #f9fafb;
     border-radius: 8px;
@@ -1417,7 +1415,6 @@
 
 /* Remediation Section */
 .detail-remediation {
-    margin: 24px 0;
     padding: 20px;
     background: #f0fdf4;
     border-radius: 8px;
@@ -1442,7 +1439,6 @@
 
 /* Compliance Tags (OWASP/CWE) */
 .detail-compliance {
-    margin: 24px 0;
     padding: 20px;
     background: #f8fafc;
     border-radius: 8px;
@@ -1482,7 +1478,6 @@
 
 /* References Section */
 .detail-references {
-    margin: 24px 0;
     padding: 20px;
     background: #fefce8;
     border-radius: 8px;
@@ -1516,7 +1511,6 @@
 
 /* Passed Test Styles */
 .detail-passed {
-    margin: 24px 0;
     padding: 20px;
     background: #f0fdf4;
     border-radius: 8px;
@@ -1559,7 +1553,6 @@
 
 /* Description Section */
 .detail-description {
-    margin: 16px 0;
     padding: 16px;
     background: #f3f4f6;
     border-radius: 8px;
