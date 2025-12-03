@@ -11,17 +11,32 @@ from pathlib import Path
 class TestScannerIDConsistency:
     """Scanner ID 일치성 테스트"""
 
-    def _extract_compat_ids(self):
-        """scanners_compat.py에서 모든 scanner ID 추출"""
-        compat_file = Path('scanner/scanners_compat.py')
-        content = compat_file.read_text(encoding='utf-8')
-        pattern = r"'id':\s*'([^']+)'"
-        ids = re.findall(pattern, content)
-        return set(ids)
+    def _extract_all_scanner_ids(self):
+        """모든 리팩토링된 스캐너 파일에서 scanner ID 추출"""
+        import glob
+        import os
+        # 테스트 실행 위치에 상관없이 프로젝트 루트 기준으로 경로 설정
+        root_dir = Path(__file__).parent.parent.parent
+        os.chdir(root_dir)
+
+        batch_files = glob.glob('scanner/scanners_refactored_batch*.py')
+        batch_files.extend(glob.glob('scanner/scanners*.py'))  # 기존 scanners.py 파일들도 포함
+
+        all_scanner_ids = set()
+        for file_path in batch_files:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # metadata = { 'id': 'xxx' 패턴 찾기
+                pattern = r"'id':\s*'([^']+)'"
+                ids = re.findall(pattern, content)
+                all_scanner_ids.update(ids)
+
+        return all_scanner_ids
 
     def _extract_field_mapping_ids(self):
         """api/views.py에서 field_mapping의 모든 키 추출"""
-        views_file = Path('api/views.py')
+        root_dir = Path(__file__).parent.parent.parent
+        views_file = root_dir / 'api' / 'views.py'
         content = views_file.read_text(encoding='utf-8')
 
         # field_mapping = { 부분 찾기
@@ -39,45 +54,57 @@ class TestScannerIDConsistency:
         keys = re.findall(pattern, mapping_content)
         return set(keys)
 
-    def test_all_compat_ids_in_field_mapping(self):
-        """모든 scanners_compat.py ID가 field_mapping에 있는지 확인"""
-        compat_ids = self._extract_compat_ids()
+    def test_all_scanner_ids_in_field_mapping(self):
+        """모든 스캐너 ID가 field_mapping에 있는지 확인"""
+        scanner_ids = self._extract_all_scanner_ids()
         mapping_keys = self._extract_field_mapping_ids()
 
-        missing_in_mapping = compat_ids - mapping_keys
+        missing_in_mapping = scanner_ids - mapping_keys
 
         if missing_in_mapping:
             error_msg = (
-                f"다음 scanners_compat.py ID들이 field_mapping에 없습니다:\n"
+                f"다음 스캐너 ID들이 field_mapping에 없습니다:\n"
                 + "\n".join(f"  - '{id}'" for id in sorted(missing_in_mapping))
             )
             pytest.fail(error_msg)
 
-    def test_no_duplicate_ids_in_compat(self):
-        """scanners_compat.py에 중복된 ID가 없는지 확인"""
-        compat_file = Path('scanner/scanners_compat.py')
-        content = compat_file.read_text(encoding='utf-8')
-        pattern = r"'id':\s*'([^']+)'"
-        ids = re.findall(pattern, content)
+    def test_no_duplicate_scanner_ids(self):
+        """스캐너 파일들에 중복된 ID가 없는지 확인"""
+        import glob
+        import os
+        root_dir = Path(__file__).parent.parent.parent
+        os.chdir(root_dir)
+
+        batch_files = glob.glob('scanner/scanners_refactored_batch*.py')
+        batch_files.extend(glob.glob('scanner/scanners*.py'))
+
+        all_ids = []
+        for file_path in batch_files:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                pattern = r"'id':\s*'([^']+)'"
+                ids = re.findall(pattern, content)
+                all_ids.extend(ids)
 
         # 중복 찾기
         seen = set()
         duplicates = []
-        for id in ids:
+        for id in all_ids:
             if id in seen:
                 duplicates.append(id)
             seen.add(id)
 
         if duplicates:
             error_msg = (
-                f"다음 ID들이 scanners_compat.py에 중복되어 있습니다:\n"
+                f"다음 ID들이 스캐너 파일들에 중복되어 있습니다:\n"
                 + "\n".join(f"  - '{id}'" for id in sorted(set(duplicates)))
             )
             pytest.fail(error_msg)
 
     def test_field_mapping_values_unique(self):
         """field_mapping의 값들이 적절히 매핑되었는지 확인"""
-        views_file = Path('api/views.py')
+        root_dir = Path(__file__).parent.parent.parent
+        views_file = root_dir / 'api' / 'views.py'
         content = views_file.read_text(encoding='utf-8')
 
         # field_mapping 추출
@@ -107,29 +134,44 @@ class TestScannerIDConsistency:
             for field, ids in sorted(multi_id_fields.items()):
                 print(f"    * {field}: {', '.join(sorted(ids))}")
 
-    def test_scanner_api_endpoint_with_compat_ids(self):
+    def test_critical_scanner_id_mappings(self):
         """
-        실제 API 엔드포인트가 scanners_compat.py ID들을 처리할 수 있는지 확인
-        (단위 테스트 - 실제 서버 없이 로직만 확인)
+        중요한 스캐너 ID들이 field_mapping에서 처리될 수 있는지 확인
+        (최근 400 Bad Request 에러를 일으켰던 ID들 포함)
         """
         from api.views import ScanViewSet
 
         viewset = ScanViewSet()
 
-        # 문제가 되었던 ID들 테스트
-        critical_ids = ['cookies', 'info_disclosure', 'outdated_dependencies']
+        # 문제가 되었던 ID들과 핵심 ID들 테스트
+        critical_ids = [
+            'xss', 'sql_injection', 'security_headers',
+            'cookies', 'cookie_security',  # 별칭 처리
+            'info_disclosure', 'information_disclosure',  # 별칭 처리
+            'outdated_dependencies'  # software_supply_chain은 별도 ID로 존재하지 않음
+        ]
 
+        failed = []
         for scanner_id in critical_ids:
             field_name = viewset._get_field_name_for_scanner(scanner_id)
-            assert field_name is not None, (
-                f"scanner_id '{scanner_id}'가 field_mapping에 없습니다. "
-                f"400 Bad Request 에러가 발생할 것입니다."
+            if field_name is None:
+                failed.append(scanner_id)
+            else:
+                print(f"  ✅ '{scanner_id}' → '{field_name}'")
+
+        if failed:
+            pytest.fail(
+                f"다음 중요한 scanner ID들이 field_mapping에 없습니다:\n"
+                + "\n".join(f"  - '{id}'" for id in failed)
             )
-            print(f"  ✅ '{scanner_id}' → '{field_name}'")
 
     def test_all_refactored_scanner_ids_mapped(self):
         """리팩토링된 스캐너들의 ID도 모두 매핑되었는지 확인"""
         import glob
+        import os
+        root_dir = Path(__file__).parent.parent.parent
+        os.chdir(root_dir)
+
         batch_files = glob.glob('scanner/scanners_refactored_batch*.py')
 
         all_scanner_ids = set()
@@ -168,19 +210,19 @@ if __name__ == '__main__':
     print("=" * 60)
 
     try:
-        print("\n[1] scanners_compat.py ID → field_mapping 확인...")
-        test_instance.test_all_compat_ids_in_field_mapping()
+        print("\n[1] 모든 스캐너 ID → field_mapping 확인...")
+        test_instance.test_all_scanner_ids_in_field_mapping()
         print("  ✅ 통과")
 
         print("\n[2] 중복 ID 확인...")
-        test_instance.test_no_duplicate_ids_in_compat()
+        test_instance.test_no_duplicate_scanner_ids()
         print("  ✅ 통과")
 
         print("\n[3] Field mapping 분석...")
         test_instance.test_field_mapping_values_unique()
 
-        print("\n[4] API 엔드포인트 로직 테스트...")
-        test_instance.test_scanner_api_endpoint_with_compat_ids()
+        print("\n[4] 중요 scanner ID 매핑 테스트...")
+        test_instance.test_critical_scanner_id_mappings()
 
         print("\n[5] 리팩토링된 스캐너 ID 매핑 확인...")
         test_instance.test_all_refactored_scanner_ids_mapped()

@@ -135,7 +135,6 @@ class BaseScanner(ABC):
 
         result = {
             'vulnerabilities': vulnerabilities,  # _build_vulnerabilities 결과 사용
-            'issues': self.issues,  # issues도 포함
             field_name: items,
             'total': len(items),
             'scanner_id': self.metadata.get('id', 'unknown'),
@@ -165,6 +164,10 @@ class BaseScanner(ABC):
             result.update(additional_fields)
 
         return result
+
+    def get_metadata(self) -> Dict[str, Any]:
+        """스캐너 메타데이터 반환"""
+        return self.metadata
 
     def _build_error_result(self, error: str) -> Dict[str, Any]:
         """
@@ -196,14 +199,11 @@ class BaseScanner(ABC):
 
             result[has_field] = False
 
-        # 추가 필드 병합 (에러가 발생해도 추가 필드는 포함)
-        try:
-            additional_fields = self._get_additional_fields()
-            result.update(additional_fields)
-        except:
-            pass
-
         return result
+
+    def get_metadata(self) -> Dict[str, Any]:
+        """스캐너 메타데이터 반환"""
+        return self.metadata
 
     def _calculate_severity(self) -> str:
         """

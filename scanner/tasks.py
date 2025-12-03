@@ -298,7 +298,7 @@ def scan_security(scan_request_id):
 
         # ProgressManager 초기화
         from .progress_manager import ProgressManager
-        pm = ProgressManager(['security'])  # security만 실행하므로 0-100% 전체 사용
+        pm = ProgressManager()  # security만 실행하므로 0-100% 전체 사용
 
         # 기본 HTTP 요청
         try:
@@ -329,7 +329,7 @@ def scan_security(scan_request_id):
 
         # 스캐너 활성화 확인
         if 'security_headers' in scanner_configs:
-            from .scanners_compat import SecurityHeaderScanner
+            from .scanners.security_header_scanner import SecurityHeaderScanner
             header_scanner = SecurityHeaderScanner(response.headers)
             header_results = header_scanner.scan()
             security_result.security_headers = header_results['headers']
@@ -347,16 +347,31 @@ def scan_security(scan_request_id):
         scan_request.progress = progress
         scan_request.save()
 
-        # 스캐너 활성화 확인
+        # SSL/TLS 기본 스캐너 실행
         if 'ssl_tls' in scanner_configs:
-            ssl_result = check_ssl_tls(scan_request.url)
-            security_result.ssl_tls_result = ssl_result
+            from .scanners.ssltls_basic import SSLTLSBasicScanner
+            ssl_basic_scanner = SSLTLSBasicScanner(scan_request.url)
+            ssl_basic_results = ssl_basic_scanner.scan()
+            security_result.ssl_tls_result = ssl_basic_results
 
             # 메타데이터 수집
-            if meta := collect_scanner_metadata(check_ssl_tls, ssl_result):
+            if meta := collect_scanner_metadata(SSLTLSBasicScanner, ssl_basic_results):
                 scanner_metadata.append(meta)
+
+            # Vulnerability 레코드 생성 (issues가 있는 경우)
+            for issue in ssl_basic_results.get('issues', [])[:5]:
+                Vulnerability.objects.create(
+                    scan_request=scan_request,
+                    category='security_misconfiguration',
+                    vulnerability_type='ssl_tls',
+                    severity=issue.get('severity', 'high'),
+                    title=issue.get('type', 'SSL/TLS Issue'),
+                    description=issue.get('description', ''),
+                    recommendation=issue.get('recommendation', 'Use HTTPS instead of HTTP'),
+                    evidence=str(issue)[:500]
+                )
         else:
-            logger.info('SSL/TLS Scanner is disabled, skipping...')
+            logger.info('SSL/TLS Basic Scanner is disabled, skipping...')
             security_result.ssl_tls_result = {'skipped': True, 'reason': 'Scanner disabled'}
 
         # 3. XSS 취약점 스캔
@@ -367,7 +382,7 @@ def scan_security(scan_request_id):
 
         # 스캐너 활성화 확인
         if 'xss_vulnerabilities' in scanner_configs:
-            from .scanners_compat import XSSScanner
+            from .scanners.xss_scanner import XSSScanner
             xss_scanner = XSSScanner(scan_request.url)
             xss_results = xss_scanner.scan()
             security_result.xss_vulnerabilities = {
@@ -404,7 +419,7 @@ def scan_security(scan_request_id):
 
         # 스캐너 활성화 확인
         if 'sql_injection' in scanner_configs:
-            from .scanners_compat import SQLInjectionScanner
+            from .scanners.sql_injection_scanner import SQLInjectionScanner
             sqli_scanner = SQLInjectionScanner(scan_request.url)
             sqli_results = sqli_scanner.scan()
             security_result.sql_injection = {
@@ -436,7 +451,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import CORSScanner
+        from .scanners.cors import CORSScanner
         cors_scanner = CORSScanner(scan_request.url, response.headers)
         cors_results = cors_scanner.scan()
         security_result.cors_misconfiguration = cors_results
@@ -460,7 +475,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import CookieScanner
+        from .scanners.cookie_scanner import CookieScanner
         cookie_scanner = CookieScanner(response)
         cookie_results = cookie_scanner.scan()
         security_result.sensitive_data_exposure = cookie_results
@@ -485,7 +500,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import CSRFScanner
+        from .scanners.csrf import CSRFScanner
         csrf_scanner = CSRFScanner(scan_request.url)
         csrf_results = csrf_scanner.scan()
         security_result.csrf_protection = csrf_results
@@ -508,7 +523,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import ClickjackingScanner
+        from .scanners.clickjacking import ClickjackingScanner
         clickjacking_scanner = ClickjackingScanner(response.headers, response.text)
         clickjacking_results = clickjacking_scanner.scan()
         security_result.clickjacking = clickjacking_results
@@ -531,8 +546,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import InformationDisclosureScanner
-        info_scanner = InformationDisclosureScanner(response)
+        from .scanners.information_disclosure import InformationDisclosureScanner
+        info_scanner = InformationDisclosureScanner(
+            html_content=response.text,
+            url=scan_request.url,
+            response=response
+        )
         info_results = info_scanner.scan()
         security_result.insufficient_logging = info_results
         if meta := collect_scanner_metadata(InformationDisclosureScanner, info_results):
@@ -555,7 +574,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import HTTPMethodScanner
+        from .scanners.http_method import HTTPMethodScanner
         method_scanner = HTTPMethodScanner(scan_request.url)
         method_results = method_scanner.scan()
         if meta := collect_scanner_metadata(HTTPMethodScanner, method_results):
@@ -577,7 +596,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import SensitiveFileScanner
+        from .scanners.sensitive_file import SensitiveFileScanner
         file_scanner = SensitiveFileScanner(scan_request.url)
         file_results = file_scanner.scan()
         if meta := collect_scanner_metadata(SensitiveFileScanner, file_results):
@@ -600,7 +619,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import MixedContentScanner
+        from .scanners.mixed_content import MixedContentScanner
         mixed_scanner = MixedContentScanner(scan_request.url, response.text)
         mixed_results = mixed_scanner.scan()
         if meta := collect_scanner_metadata(MixedContentScanner, mixed_results):
@@ -622,7 +641,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import SubresourceIntegrityScanner
+        from .scanners.subresource_integrity import SubresourceIntegrityScanner
         sri_scanner = SubresourceIntegrityScanner(response.text)
         sri_results = sri_scanner.scan()
         if meta := collect_scanner_metadata(SubresourceIntegrityScanner, sri_results):
@@ -644,7 +663,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import DirectoryListingScanner
+        from .scanners.directory_listing import DirectoryListingScanner
         listing_scanner = DirectoryListingScanner(scan_request.url)
         listing_results = listing_scanner.scan()
         if meta := collect_scanner_metadata(DirectoryListingScanner, listing_results):
@@ -666,7 +685,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_compat import OpenRedirectScanner
+        from .scanners.open_redirect import OpenRedirectScanner
         redirect_scanner = OpenRedirectScanner(scan_request.url)
         redirect_results = redirect_scanner.scan()
         security_result.open_redirects = redirect_results
@@ -691,7 +710,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import SSRFScanner
+        from .scanners.ssrf import SSRFScanner
         ssrf_scanner = SSRFScanner(scan_request.url, response.text)
         ssrf_results = ssrf_scanner.scan()
         security_result.ssrf_vulnerabilities = ssrf_results
@@ -715,8 +734,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import XXEScanner
-        xxe_scanner = XXEScanner(scan_request.url, response, response.text)
+        from .scanners.xxe import XXEScanner
+        xxe_scanner = XXEScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         xxe_results = xxe_scanner.scan()
         security_result.xxe_vulnerabilities = xxe_results
         if meta := collect_scanner_metadata(XXEScanner, xxe_results):
@@ -739,7 +762,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import CommandInjectionScanner
+        from .scanners.command_injection import CommandInjectionScanner
         cmdi_scanner = CommandInjectionScanner(scan_request.url, response.text)
         cmdi_results = cmdi_scanner.scan()
         security_result.command_injection = cmdi_results
@@ -763,7 +786,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import DeserializationScanner
+        from .scanners.deserialization import DeserializationScanner
         deser_scanner = DeserializationScanner(response, response.text)
         deser_results = deser_scanner.scan()
         security_result.deserialization = deser_results
@@ -787,7 +810,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import FileUploadScanner
+        from .scanners.file_upload import FileUploadScanner
         upload_scanner = FileUploadScanner(response.text)
         upload_results = upload_scanner.scan()
         security_result.file_upload = upload_results
@@ -811,7 +834,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import PathTraversalScanner
+        from .scanners.path_traversal import PathTraversalScanner
         path_scanner = PathTraversalScanner(scan_request.url)
         path_results = path_scanner.scan()
         security_result.path_traversal = path_results
@@ -835,7 +858,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import JWTSecurityScanner
+        from .scanners.jwt_security import JWTSecurityScanner
         jwt_scanner = JWTSecurityScanner(response, response.text)
         jwt_results = jwt_scanner.scan()
         security_result.jwt_vulnerabilities = jwt_results
@@ -859,7 +882,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import TemplateInjectionScanner
+        from .scanners.template_injection import TemplateInjectionScanner
         ssti_scanner = TemplateInjectionScanner(scan_request.url, response.text)
         ssti_results = ssti_scanner.scan()
         security_result.template_injection = ssti_results
@@ -883,8 +906,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import NoSQLInjectionScanner
-        nosql_scanner = NoSQLInjectionScanner(scan_request.url, response, response.text)
+        from .scanners.no_sql_injection import NoSQLInjectionScanner
+        nosql_scanner = NoSQLInjectionScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         nosql_results = nosql_scanner.scan()
         security_result.nosql_injection = nosql_results
         if meta := collect_scanner_metadata(NoSQLInjectionScanner, nosql_results):
@@ -907,7 +934,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_advanced import SSLTLSDeepScanner
+        from .scanners.ssltls_deep import SSLTLSDeepScanner
         ssl_deep_scanner = SSLTLSDeepScanner(scan_request.url)
         ssl_deep_results = ssl_deep_scanner.scan()
         security_result.ssl_tls_vulnerabilities = ssl_deep_results
@@ -933,8 +960,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_api import RESTAPISecurityScanner
-        rest_api_scanner = RESTAPISecurityScanner(scan_request.url, response, response.text)
+        from .scanners.restapi_security import RESTAPISecurityScanner
+        rest_api_scanner = RESTAPISecurityScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         rest_api_results = rest_api_scanner.scan()
         security_result.rest_api_vulnerabilities = rest_api_results
         if meta := collect_scanner_metadata(RESTAPISecurityScanner, rest_api_results):
@@ -957,7 +988,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_api import GraphQLSecurityScanner
+        from .scanners.graph_ql_security import GraphQLSecurityScanner
         graphql_scanner = GraphQLSecurityScanner(scan_request.url, response.text)
         graphql_results = graphql_scanner.scan()
         security_result.graphql_vulnerabilities = graphql_results
@@ -981,7 +1012,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_api import OAuthSecurityScanner
+        from .scanners.o_auth_security import OAuthSecurityScanner
         oauth_scanner = OAuthSecurityScanner(scan_request.url, response.text)
         oauth_results = oauth_scanner.scan()
         security_result.oauth_vulnerabilities = oauth_results
@@ -1005,8 +1036,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_api import SessionSecurityScanner
-        session_scanner = SessionSecurityScanner(response, scan_request.url)
+        from .scanners.session_security import SessionSecurityScanner
+        session_scanner = SessionSecurityScanner(
+            url=scan_request.url,
+            response=response,
+            html_content=response.text
+        )
         session_results = session_scanner.scan()
         security_result.session_vulnerabilities = session_results
         if meta := collect_scanner_metadata(SessionSecurityScanner, session_results):
@@ -1029,7 +1064,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_api import PasswordPolicyScanner
+        from .scanners.password_policy import PasswordPolicyScanner
         password_scanner = PasswordPolicyScanner(response.text, scan_request.url)
         password_results = password_scanner.scan()
         security_result.password_policy = password_results
@@ -1053,7 +1088,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_api import RateLimitingScanner
+        from .scanners.rate_limiting import RateLimitingScanner
         rate_limit_scanner = RateLimitingScanner(response, scan_request.url)
         rate_limit_results = rate_limit_scanner.scan()
         security_result.rate_limiting = rate_limit_results
@@ -1077,7 +1112,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_api import LDAPInjectionScanner
+        from .scanners.ldap_injection import LDAPInjectionScanner
         ldap_scanner = LDAPInjectionScanner(scan_request.url, response.text)
         ldap_results = ldap_scanner.scan()
         security_result.ldap_injection = ldap_results
@@ -1101,7 +1136,7 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_api import AuthorizationScanner
+        from .scanners.authorization import AuthorizationScanner
         authz_scanner = AuthorizationScanner(scan_request.url)
         authz_results = authz_scanner.scan()
         security_result.authorization_vulnerabilities = authz_results
@@ -1125,8 +1160,13 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_supply_chain import SoftwareSupplyChainScanner
-        supply_chain_scanner = SoftwareSupplyChainScanner(scan_request.url, response, response.text)
+        from .scanners.software_supply_chain_scanner import SoftwareSupplyChainScanner
+        supply_chain_scanner = SoftwareSupplyChainScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response,
+            http_client=requests
+        )
         supply_chain_results = supply_chain_scanner.scan()
         security_result.supply_chain_vulnerabilities = supply_chain_results
         if meta := collect_scanner_metadata(SoftwareSupplyChainScanner, supply_chain_results):
@@ -1149,8 +1189,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_exception import ExceptionHandlingScanner
-        exception_scanner = ExceptionHandlingScanner(scan_request.url, response, response.text)
+        from .scanners.exception_handling_scanner import ExceptionHandlingScanner
+        exception_scanner = ExceptionHandlingScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         exception_results = exception_scanner.scan()
         security_result.exception_handling_vulnerabilities = exception_results
         if meta := collect_scanner_metadata(ExceptionHandlingScanner, exception_results):
@@ -1173,8 +1217,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_business_logic import PriceManipulationScanner
-        price_scanner = PriceManipulationScanner(scan_request.url, response, response.text)
+        from .scanners.price_manipulation import PriceManipulationScanner
+        price_scanner = PriceManipulationScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         price_results = price_scanner.scan()
         security_result.price_manipulation_vulnerabilities = price_results
         if meta := collect_scanner_metadata(PriceManipulationScanner, price_results):
@@ -1197,8 +1245,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_business_logic import RaceConditionScanner
-        race_scanner = RaceConditionScanner(scan_request.url, response, response.text)
+        from .scanners.race_condition import RaceConditionScanner
+        race_scanner = RaceConditionScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         race_results = race_scanner.scan()
         security_result.race_condition_vulnerabilities = race_results
         if meta := collect_scanner_metadata(RaceConditionScanner, race_results):
@@ -1221,8 +1273,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_business_logic import WorkflowBypassScanner
-        workflow_scanner = WorkflowBypassScanner(scan_request.url, response, response.text)
+        from .scanners.workflow_bypass import WorkflowBypassScanner
+        workflow_scanner = WorkflowBypassScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         workflow_results = workflow_scanner.scan()
         security_result.workflow_bypass_vulnerabilities = workflow_results
         if meta := collect_scanner_metadata(WorkflowBypassScanner, workflow_results):
@@ -1245,8 +1301,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_business_logic import AccountEnumerationScanner
-        account_scanner = AccountEnumerationScanner(scan_request.url, response, response.text)
+        from .scanners.account_enumeration import AccountEnumerationScanner
+        account_scanner = AccountEnumerationScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         account_results = account_scanner.scan()
         security_result.account_enumeration_vulnerabilities = account_results
         if meta := collect_scanner_metadata(AccountEnumerationScanner, account_results):
@@ -1269,8 +1329,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_business_logic import ResourceExhaustionScanner
-        resource_scanner = ResourceExhaustionScanner(scan_request.url, response, response.text)
+        from .scanners.resource_exhaustion import ResourceExhaustionScanner
+        resource_scanner = ResourceExhaustionScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         resource_results = resource_scanner.scan()
         security_result.resource_exhaustion_vulnerabilities = resource_results
         if meta := collect_scanner_metadata(ResourceExhaustionScanner, resource_results):
@@ -1293,8 +1357,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_business_logic import LoggingMonitoringScanner
-        logging_scanner = LoggingMonitoringScanner(scan_request.url, response, response.text)
+        from .scanners.logging_monitoring import LoggingMonitoringScanner
+        logging_scanner = LoggingMonitoringScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         logging_results = logging_scanner.scan()
         security_result.logging_monitoring_vulnerabilities = logging_results
         if meta := collect_scanner_metadata(LoggingMonitoringScanner, logging_results):
@@ -1317,8 +1385,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_business_logic import BusinessLogicAnomalyScanner
-        anomaly_scanner = BusinessLogicAnomalyScanner(scan_request.url, response, response.text)
+        from .scanners.business_logic_anomaly import BusinessLogicAnomalyScanner
+        anomaly_scanner = BusinessLogicAnomalyScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         anomaly_results = anomaly_scanner.scan()
         security_result.business_logic_anomaly_vulnerabilities = anomaly_results
         if meta := collect_scanner_metadata(BusinessLogicAnomalyScanner, anomaly_results):
@@ -1341,8 +1413,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_supply_chain_advanced import PackageIntegrityScanner
-        pkg_integrity_scanner = PackageIntegrityScanner(scan_request.url, response, response.text)
+        from .scanners.package_integrity_scanner import PackageIntegrityScanner
+        pkg_integrity_scanner = PackageIntegrityScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         pkg_integrity_results = pkg_integrity_scanner.scan()
         security_result.package_integrity_vulnerabilities = pkg_integrity_results
         if meta := collect_scanner_metadata(PackageIntegrityScanner, pkg_integrity_results):
@@ -1365,8 +1441,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_supply_chain_advanced import TyposquattingScanner
-        typo_scanner = TyposquattingScanner(scan_request.url, response, response.text)
+        from .scanners.typosquatting_scanner import TyposquattingScanner
+        typo_scanner = TyposquattingScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         typo_results = typo_scanner.scan()
         security_result.typosquatting_vulnerabilities = typo_results
         if meta := collect_scanner_metadata(TyposquattingScanner, typo_results):
@@ -1389,8 +1469,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_supply_chain_advanced import OutdatedDependencyScanner
-        outdated_scanner = OutdatedDependencyScanner(scan_request.url, response, response.text)
+        from .scanners.outdated_dependency_scanner import OutdatedDependencyScanner
+        outdated_scanner = OutdatedDependencyScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         outdated_results = outdated_scanner.scan()
         security_result.outdated_dependency_vulnerabilities = outdated_results
         if meta := collect_scanner_metadata(OutdatedDependencyScanner, outdated_results):
@@ -1413,8 +1497,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_supply_chain_advanced import LicenseComplianceScanner
-        license_scanner = LicenseComplianceScanner(scan_request.url, response, response.text)
+        from .scanners.license_compliance_scanner import LicenseComplianceScanner
+        license_scanner = LicenseComplianceScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         license_results = license_scanner.scan()
         security_result.license_compliance_vulnerabilities = license_results
         if meta := collect_scanner_metadata(LicenseComplianceScanner, license_results):
@@ -1437,8 +1525,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_integrity_advanced import JWTAdvancedScanner
-        jwt_adv_scanner = JWTAdvancedScanner(scan_request.url, response, response.text)
+        from .scanners.jwt_advanced_scanner import JWTAdvancedScanner
+        jwt_adv_scanner = JWTAdvancedScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         jwt_adv_results = jwt_adv_scanner.scan()
         security_result.jwt_advanced_vulnerabilities = jwt_adv_results
         if meta := collect_scanner_metadata(JWTAdvancedScanner, jwt_adv_results):
@@ -1461,8 +1553,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_integrity_advanced import SerializationIntegrityScanner
-        serialization_scanner = SerializationIntegrityScanner(scan_request.url, response, response.text)
+        from .scanners.serialization_integrity_scanner import SerializationIntegrityScanner
+        serialization_scanner = SerializationIntegrityScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         serialization_results = serialization_scanner.scan()
         security_result.serialization_integrity_vulnerabilities = serialization_results
         if meta := collect_scanner_metadata(SerializationIntegrityScanner, serialization_results):
@@ -1485,8 +1581,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_integrity_advanced import APIIntegrityScanner
-        api_integrity_scanner = APIIntegrityScanner(scan_request.url, response, response.text)
+        from .scanners.api_integrity_scanner import APIIntegrityScanner
+        api_integrity_scanner = APIIntegrityScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         api_integrity_results = api_integrity_scanner.scan()
         security_result.api_integrity_vulnerabilities = api_integrity_results
         if meta := collect_scanner_metadata(APIIntegrityScanner, api_integrity_results):
@@ -1509,8 +1609,12 @@ def scan_security(scan_request_id):
         logger.info(f'{name}: {progress:.1f}%')
         scan_request.progress = progress
         scan_request.save()
-        from .scanners_integrity_advanced import ChecksumValidationScanner
-        checksum_scanner = ChecksumValidationScanner(scan_request.url, response, response.text)
+        from .scanners.checksum_validation_scanner import ChecksumValidationScanner
+        checksum_scanner = ChecksumValidationScanner(
+            url=scan_request.url,
+            html_content=response.text,
+            response=response
+        )
         checksum_results = checksum_scanner.scan()
         security_result.checksum_validation_vulnerabilities = checksum_results
         if meta := collect_scanner_metadata(ChecksumValidationScanner, checksum_results):
@@ -1577,7 +1681,7 @@ def scan_standards(scan_request_id):
         scan_request = ScanRequest.objects.get(id=scan_request_id)
 
         # ProgressManager 초기화 (standards만 실행하므로 0-100% 전체 사용)
-        pm = ProgressManager(['standards'])
+        pm = ProgressManager()
 
         # 기본 HTTP 요청
         try:
@@ -1702,7 +1806,7 @@ def scan_accessibility(scan_request_id):
         scan_request = ScanRequest.objects.get(id=scan_request_id)
 
         # ProgressManager 초기화 (accessibility만 실행하므로 0-100% 전체 사용)
-        pm = ProgressManager(['accessibility'])
+        pm = ProgressManager()
 
         # 기본 HTTP 요청
         try:
@@ -1804,36 +1908,6 @@ def check_security_headers(headers):
             }
 
     return security_headers_check
-
-
-def check_ssl_tls(url):
-    """SSL/TLS 검사 (간단한 버전)"""
-    import urllib.parse
-
-    parsed = urllib.parse.urlparse(url)
-
-    if parsed.scheme == 'https':
-        return {
-            'https': True,
-            'status': 'ok',
-            'message': 'HTTPS를 사용합니다.'
-        }
-    else:
-        return {
-            'https': False,
-            'status': 'warning',
-            'message': 'HTTPS를 사용하지 않습니다. SSL/TLS 인증서를 설정하세요.'
-        }
-
-# SSL/TLS 스캐너 메타데이터
-check_ssl_tls.metadata = {
-    'id': 'ssl_tls',
-    'name': 'SSL/TLS 검사',
-    'icon': '🔐',
-    'description': 'HTTPS 및 인증서 검증',
-    'weight': 1,
-    'field': 'ssl_tls_result'
-}
 
 
 def check_seo(soup, url):

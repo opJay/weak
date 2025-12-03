@@ -76,6 +76,7 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
             'info_disclosure': 'sensitive_data_exposure',  # scanners_compat.py 별칭
             'http_methods': 'http_methods',
             'sensitive_files': 'sensitive_files',
+            'sensitive_file': 'sensitive_files',  # 별칭 (스캐너 ID)
             'mixed_content': 'mixed_content',
             'subresource_integrity': 'subresource_integrity',
             'sri': 'subresource_integrity',  # 별칭
@@ -103,6 +104,7 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
             'graphql_security': 'graphql_vulnerabilities',
             'graphql': 'graphql_vulnerabilities',  # 별칭
             'oauth_security': 'oauth_vulnerabilities',
+            'o_auth_security': 'oauth_vulnerabilities',  # 별칭 (스캐너 ID)
             'oauth': 'oauth_vulnerabilities',  # 별칭
             'session_security': 'session_vulnerabilities',
             'session': 'session_vulnerabilities',  # 별칭
@@ -113,6 +115,7 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
 
             # 비즈니스 로직 및 공급망
             'supply_chain': 'supply_chain_vulnerabilities',
+            'software_supply_chain': 'software_supply_chain_vulnerabilities',  # 소프트웨어 공급망 보안 스캐너
             'exception_handling': 'exception_handling_vulnerabilities',
             'price_manipulation': 'price_manipulation_vulnerabilities',
             'race_condition': 'race_condition_vulnerabilities',

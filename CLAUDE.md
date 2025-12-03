@@ -6,6 +6,7 @@
 1. **ALL responses and reasoning MUST be in Korean (한국어)**
 2. **NO over-engineering - Keep solutions simple and practical**
 3. **NEVER fix markdown lint errors - Ignore all markdown linting warnings**
+4. **ONLY commit and push when explicitly requested by the user**
 
 ## Project Overview
 

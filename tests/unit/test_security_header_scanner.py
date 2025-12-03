@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from scanner.scanners_refactored import SecurityHeaderScanner
+from scanner.scanners.security_header_scanner import SecurityHeaderScanner
 
 
 class TestSecurityHeaderScanner:
