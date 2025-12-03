@@ -66,6 +66,9 @@ class DeserializationScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """Deserialization 취약점 스캔 실행"""
+        # 검사 항목: 쿠키, 직렬화 함수, 인코딩 데이터
+        self.checked = 3
+
         try:
             # 1. 쿠키에서 직렬화된 데이터 확인
             if self.response:
@@ -79,6 +82,31 @@ class DeserializationScanner(BaseScanner):
 
         except Exception as e:
             logger.error(f"Deserialization scan error: {str(e)}")
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='deserialization_check',
+                name='역직렬화 취약점 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 역직렬화 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='역직렬화 취약점 없음',
+                recommendation='안전한 직렬화 방식(JSON 등)을 사용하고, 신뢰할 수 없는 데이터를 역직렬화하지 마세요.'
+            )
+        else:
+            self._add_detail(
+                id='deserialization_check',
+                name='역직렬화 취약점 검사',
+                status='pass',
+                severity='info',
+                description='역직렬화 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _scan_cookies(self) -> None:
         """쿠키에서 직렬화된 데이터 확인"""

@@ -60,6 +60,9 @@ class TemplateInjectionScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """SSTI 스캔 실행"""
+        # 검사 항목: 템플릿 구문, URL 파라미터
+        self.checked = 2
+
         try:
             # 1. HTML에서 템플릿 구문 탐지
             if self.html_content:
@@ -71,6 +74,31 @@ class TemplateInjectionScanner(BaseScanner):
 
         except Exception as e:
             logger.error(f"Template injection scan error: {str(e)}")
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='template_injection_check',
+                name='템플릿 주입 취약점 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 템플릿 주입 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='템플릿 주입 취약점 없음',
+                recommendation='사용자 입력을 템플릿으로 처리하지 말고, 데이터로만 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='template_injection_check',
+                name='템플릿 주입 취약점 검사',
+                status='pass',
+                severity='info',
+                description='템플릿 주입 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _detect_template_syntax(self) -> None:
         """템플릿 구문 탐지"""

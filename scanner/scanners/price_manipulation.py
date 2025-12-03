@@ -30,6 +30,8 @@ class PriceManipulationScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """가격 조작 취약점 스캔"""
+        # 검사 항목: URL 파라미터, hidden 필드, 음수 값
+        self.checked = 3
 
         # HTTP 요청 수행
         if not self.html_content and self.url:
@@ -84,6 +86,31 @@ class PriceManipulationScanner(BaseScanner):
                         })
                 except:
                     pass
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='price_manipulation_check',
+                name='가격 조작 취약점 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 가격 조작 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='가격 조작 취약점 없음',
+                recommendation='서버 측에서 가격과 수량을 검증하세요.'
+            )
+        else:
+            self._add_detail(
+                id='price_manipulation_check',
+                name='가격 조작 취약점 검사',
+                status='pass',
+                severity='info',
+                description='가격 조작 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _get_additional_fields(self) -> Dict[str, Any]:
         """추가 필드 반환"""

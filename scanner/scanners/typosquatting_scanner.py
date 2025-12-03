@@ -70,6 +70,9 @@ class TyposquattingScanner(BaseScanner):
 
     def _execute_scan(self):
         """스캔 실행"""
+        # 검사 항목: 종속성 타이포스쿼팅, 스크립트 타이포스쿼팅, 의심스러운 패턴
+        self.checked = 3
+
         # 1. 종속성 파일에서 타이포스쿼팅 검사
         self._check_dependency_typosquatting()
 
@@ -78,6 +81,31 @@ class TyposquattingScanner(BaseScanner):
 
         # 3. 의심스러운 패키지명 패턴 검사
         self._check_suspicious_patterns()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='typosquatting_check',
+                name='타이포스쿼팅 탐지',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 타이포스쿼팅 위험 발견',
+                value=f'Critical: {critical_count}개',
+                expected='타이포스쿼팅 위험 없음',
+                recommendation='패키지명을 정확히 확인하고 공식 소스에서 설치하세요.'
+            )
+        else:
+            self._add_detail(
+                id='typosquatting_check',
+                name='타이포스쿼팅 탐지',
+                status='pass',
+                severity='info',
+                description='타이포스쿼팅 위험이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_dependency_typosquatting(self):
         """종속성 파일에서 타이포스쿼팅 검사"""

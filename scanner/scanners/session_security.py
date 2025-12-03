@@ -50,10 +50,38 @@ class SessionSecurityScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """세션 보안 스캔 실행"""
+        # 검사 항목: 쿠키 보안, Session Fixation, 타임아웃, 동시 세션
+        self.checked = 4
+
         self._check_session_cookie_security()
         self._check_session_fixation()
         self._check_session_timeout()
         self._check_concurrent_sessions()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') in ['critical', 'high']])
+            self._add_detail(
+                id='session_security_check',
+                name='세션 보안 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 세션 보안 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='세션 보안 취약점 없음',
+                recommendation='HttpOnly, Secure 플래그 설정, 세션 타임아웃 구현하세요.'
+            )
+        else:
+            self._add_detail(
+                id='session_security_check',
+                name='세션 보안 검사',
+                status='pass',
+                severity='info',
+                description='세션 보안 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_session_cookie_security(self) -> None:
         """세션 쿠키 보안 설정 검사"""

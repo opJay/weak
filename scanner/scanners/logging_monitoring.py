@@ -58,6 +58,9 @@ class LoggingMonitoringScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """실제 스캔 로직 실행"""
+        # 검사 항목: 로깅 헤더, 에러 처리, 보안 이벤트 로깅
+        self.checked = 3
+
         # 1. 응답 헤더에서 로깅 정보 확인
         self._check_logging_headers()
 
@@ -66,6 +69,31 @@ class LoggingMonitoringScanner(BaseScanner):
 
         # 3. 보안 이벤트 기록 여부 추정
         self._estimate_security_logging()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            medium_count = len([v for v in self.vulnerabilities if v.get('severity') == 'medium'])
+            self._add_detail(
+                id='logging_monitoring_check',
+                name='로깅/모니터링 검사',
+                status='fail',
+                severity='medium' if medium_count > 0 else 'low',
+                description=f'{len(self.vulnerabilities)}개의 로깅/모니터링 취약점 발견',
+                value=f'Medium: {medium_count}개',
+                expected='로깅/모니터링 취약점 없음',
+                recommendation='보안 이벤트를 체계적으로 로깅하고 모니터링하세요.'
+            )
+        else:
+            self._add_detail(
+                id='logging_monitoring_check',
+                name='로깅/모니터링 검사',
+                status='pass',
+                severity='info',
+                description='로깅/모니터링 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _build_result(self) -> Dict[str, Any]:
         """결과 구성"""

@@ -213,6 +213,9 @@ class SecurityHeaderScanner(BaseScanner):
     # ========== 스캔 실행 ==========
     def _execute_scan(self) -> None:
         """보안 헤더 스캔 실행"""
+        # 검사 대상: 7개 보안 헤더
+        self.checked = len(self.SECURITY_HEADERS)
+
         for header_name, header_info in self.SECURITY_HEADERS.items():
             if header_name in self.headers:
                 # 헤더가 존재하는 경우
@@ -225,6 +228,7 @@ class SecurityHeaderScanner(BaseScanner):
     # ========== 헤더 분석 메서드 ==========
     def _analyze_header_value(self, header_name: str, header_value: str, header_info: Dict) -> None:
         """헤더 값 분석 및 검증"""
+        header_id = header_name.lower().replace('-', '_')
         result = {
             'present': True,
             'value': header_value,
@@ -246,8 +250,20 @@ class SecurityHeaderScanner(BaseScanner):
 
         self.results[header_name] = result
 
-        # 약한 설정은 취약점으로 추가
+        # 세부 항목 추가 (details)
         if result['status'] == 'weak':
+            # 약한 설정
+            self._add_detail(
+                id=header_id,
+                name=header_name,
+                status='warning',
+                severity=header_info.get('severity', 'low'),
+                description=result.get('warning', header_info['description']),
+                value=header_value,
+                expected=header_info['recommendation'],
+                recommendation=header_info['recommendation']
+            )
+            # 취약점으로도 추가
             self.vulnerabilities.append({
                 'type': f'Weak {header_name}',
                 'severity': header_info.get('severity', 'low'),
@@ -256,9 +272,22 @@ class SecurityHeaderScanner(BaseScanner):
                 'description': result.get('warning', header_info['description']),
                 'recommendation': header_info['recommendation']
             })
+        else:
+            # 정상 설정
+            self._add_detail(
+                id=header_id,
+                name=header_name,
+                status='pass',
+                severity='info',
+                description=f'{header_name} 헤더가 올바르게 설정됨',
+                value=header_value,
+                expected=header_info['recommendation'],
+                recommendation=None
+            )
 
     def _report_missing_header(self, header_name: str, header_info: Dict) -> None:
         """누락된 헤더 보고"""
+        header_id = header_name.lower().replace('-', '_')
         self.results[header_name] = {
             'present': False,
             'status': 'missing',
@@ -267,6 +296,18 @@ class SecurityHeaderScanner(BaseScanner):
             'recommendation': header_info['recommendation']
         }
         self.missing_headers.append(header_name)
+
+        # 세부 항목 추가 (details) - 모든 누락 헤더
+        self._add_detail(
+            id=header_id,
+            name=header_name,
+            status='fail',
+            severity=header_info['severity'],
+            description=f'{header_name} 헤더가 누락됨. {header_info["description"]}',
+            value=None,
+            expected=header_info['recommendation'],
+            recommendation=header_info['recommendation']
+        )
 
         # 중요 헤더 누락은 취약점으로 추가
         if header_info['severity'] in ['high', 'medium']:

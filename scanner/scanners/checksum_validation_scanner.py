@@ -36,6 +36,9 @@ class ChecksumValidationScanner(BaseScanner):
 
     def _execute_scan(self):
         """스캔 실행"""
+        # 검사 항목: 다운로드 체크섬, 체크섬 파일, 인라인 체크섬, 업로드 체크섬
+        self.checked = 4
+
         # 1. 다운로드 링크와 체크섬 검사
         self._check_download_checksums()
 
@@ -47,6 +50,31 @@ class ChecksumValidationScanner(BaseScanner):
 
         # 4. 파일 업로드 체크섬 검사
         self._check_upload_checksums()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            medium_count = len([v for v in self.vulnerabilities if v.get('severity') == 'medium'])
+            self._add_detail(
+                id='checksum_validation_check',
+                name='체크섬 검증 검사',
+                status='fail',
+                severity='medium' if medium_count > 0 else 'low',
+                description=f'{len(self.vulnerabilities)}개의 체크섬 검증 문제 발견',
+                value=f'Medium: {medium_count}개',
+                expected='체크섬 검증 문제 없음',
+                recommendation='SHA-256 이상의 해시와 PGP 서명을 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='checksum_validation_check',
+                name='체크섬 검증 검사',
+                status='pass',
+                severity='info',
+                description='체크섬 검증이 적절히 구현됨',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_download_checksums(self):
         """다운로드 링크와 체크섬 검사"""

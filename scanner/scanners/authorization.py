@@ -50,10 +50,39 @@ class AuthorizationScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """인가 취약점 스캔 실행"""
+        # 검사 항목: IDOR, 예측 가능 ID, 관리자 접근, 함수 레벨 접근
+        self.checked = 4
+
         self._check_direct_object_references()
         self._check_predictable_ids()
         self._check_admin_interfaces()
         self._check_function_level_access()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') == 'high'])
+            self._add_detail(
+                id='authorization_check',
+                name='인가 취약점 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else ('high' if high_count > 0 else 'medium'),
+                description=f'{len(self.vulnerabilities)}개의 인가 취약점 발견',
+                value=f'Critical: {critical_count}, High: {high_count}개',
+                expected='인가 취약점 없음',
+                recommendation='적절한 권한 검증을 구현하고 UUID 사용을 고려하세요.'
+            )
+        else:
+            self._add_detail(
+                id='authorization_check',
+                name='인가 취약점 검사',
+                status='pass',
+                severity='info',
+                description='인가 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_direct_object_references(self) -> None:
         """직접 객체 참조(IDOR) 검사"""

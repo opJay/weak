@@ -124,6 +124,13 @@ class SecurityScanResult(models.Model):
     cors_misconfiguration = models.JSONField(default=dict, verbose_name='CORS 설정 오류')
     open_redirects = models.JSONField(default=dict, verbose_name='오픈 리다이렉트')
 
+    # 추가 기본 보안 검사
+    http_method = models.JSONField(default=dict, verbose_name='HTTP 메서드')
+    sensitive_file = models.JSONField(default=dict, verbose_name='민감한 파일 노출')
+    mixed_content = models.JSONField(default=dict, verbose_name='Mixed Content')
+    subresource_integrity = models.JSONField(default=dict, verbose_name='SRI')
+    directory_listing = models.JSONField(default=dict, verbose_name='디렉토리 리스팅')
+
     # 고급 보안 취약점 (scanners_advanced.py)
     ssrf_vulnerabilities = models.JSONField(default=dict, verbose_name='SSRF 취약점')
     xxe_vulnerabilities = models.JSONField(default=dict, verbose_name='XXE 취약점')

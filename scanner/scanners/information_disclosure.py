@@ -30,7 +30,7 @@ class InformationDisclosureScanner(BaseScanner):
         'icon': '📝',
         'description': '민감한 정보 노출 탐지',
         'weight': 1,
-        'field': 'disclosure',
+        'field': 'insufficient_logging',
         'category': 'security_basic',
         'OWASP': 'A05:2025',
     }
@@ -121,6 +121,9 @@ class InformationDisclosureScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """정보 노출 검사 실행"""
+        # 검사 항목: 민감한 패턴, HTML 주석, 응답 헤더, 디버그 모드, 소스 맵
+        self.checked = 5
+
         # 1. HTML 콘텐츠에서 민감한 패턴 검색
         self._scan_sensitive_patterns()
 
@@ -139,6 +142,16 @@ class InformationDisclosureScanner(BaseScanner):
     def _scan_sensitive_patterns(self) -> None:
         """민감한 정보 패턴 검색"""
         if not self.html_content:
+            self._add_detail(
+                id='sensitive_patterns',
+                name='민감한 정보 패턴',
+                status='pass',
+                severity='info',
+                description='검사할 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         found_patterns = {}
@@ -174,9 +187,53 @@ class InformationDisclosureScanner(BaseScanner):
 
         self.issues.extend(found_patterns.values())
 
+        if found_patterns:
+            pattern_types = list(found_patterns.keys())
+            max_severity = 'info'
+            for p in found_patterns.values():
+                if p['severity'] == 'critical':
+                    max_severity = 'critical'
+                    break
+                elif p['severity'] == 'high' and max_severity not in ['critical']:
+                    max_severity = 'high'
+                elif p['severity'] == 'medium' and max_severity not in ['critical', 'high']:
+                    max_severity = 'medium'
+
+            self._add_detail(
+                id='sensitive_patterns',
+                name='민감한 정보 패턴',
+                status='fail',
+                severity=max_severity,
+                description=f'{len(found_patterns)}개 유형의 민감한 정보 감지',
+                value=', '.join(pattern_types[:3]) + ('...' if len(pattern_types) > 3 else ''),
+                expected='민감한 정보 없음',
+                recommendation='민감한 정보를 응답에서 제거하세요.'
+            )
+        else:
+            self._add_detail(
+                id='sensitive_patterns',
+                name='민감한 정보 패턴',
+                status='pass',
+                severity='info',
+                description='민감한 정보 패턴이 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+
     def _scan_html_comments(self) -> None:
         """HTML 주석에서 민감한 정보 검사"""
         if not self.html_content:
+            self._add_detail(
+                id='html_comments',
+                name='HTML 주석 검사',
+                status='pass',
+                severity='info',
+                description='검사할 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         comments = re.findall(r'<!--(.*?)-->', self.html_content, re.DOTALL)
@@ -206,10 +263,42 @@ class InformationDisclosureScanner(BaseScanner):
                 'comments': sensitive_comments[:3],  # 최대 3개
                 'recommendation': '프로덕션 환경에서는 민감한 주석을 제거하세요.'
             })
+            keywords_found = list(set(c['keyword'] for c in sensitive_comments))
+            self._add_detail(
+                id='html_comments',
+                name='HTML 주석 검사',
+                status='warning',
+                severity='medium',
+                description=f'민감한 주석 {len(sensitive_comments)}개 발견',
+                value=', '.join(keywords_found[:3]),
+                expected='민감한 주석 없음',
+                recommendation='프로덕션 환경에서는 민감한 주석을 제거하세요.'
+            )
+        else:
+            self._add_detail(
+                id='html_comments',
+                name='HTML 주석 검사',
+                status='pass',
+                severity='info',
+                description=f'주석 {len(comments)}개 확인, 민감한 내용 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _scan_response_headers(self) -> None:
         """응답 헤더에서 정보 노출 검사"""
         if not self.headers:
+            self._add_detail(
+                id='response_headers',
+                name='응답 헤더 검사',
+                status='pass',
+                severity='info',
+                description='검사할 헤더 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         # 정보를 노출하는 헤더들
@@ -226,9 +315,13 @@ class InformationDisclosureScanner(BaseScanner):
             'X-Debug-Token-Link': ('디버그 링크', 'high'),
         }
 
+        exposed_headers = []
+        max_severity = 'info'
+
         for header, (desc, severity) in exposing_headers.items():
             value = self.headers.get(header)
             if value:
+                exposed_headers.append(header)
                 self.issues.append({
                     'type': 'Header Information Disclosure',
                     'severity': severity,
@@ -237,10 +330,49 @@ class InformationDisclosureScanner(BaseScanner):
                     'description': f'{desc}가 헤더에 노출되었습니다.',
                     'recommendation': f'프로덕션 환경에서는 {header} 헤더를 제거하거나 최소화하세요.'
                 })
+                if severity == 'high':
+                    max_severity = 'high'
+                elif severity == 'medium' and max_severity != 'high':
+                    max_severity = 'medium'
+                elif severity == 'low' and max_severity == 'info':
+                    max_severity = 'low'
+
+        if exposed_headers:
+            self._add_detail(
+                id='response_headers',
+                name='응답 헤더 검사',
+                status='warning',
+                severity=max_severity,
+                description=f'정보 노출 헤더 {len(exposed_headers)}개 발견',
+                value=', '.join(exposed_headers[:3]) + ('...' if len(exposed_headers) > 3 else ''),
+                expected='정보 노출 헤더 제거',
+                recommendation='불필요한 서버 정보 헤더를 제거하세요.'
+            )
+        else:
+            self._add_detail(
+                id='response_headers',
+                name='응답 헤더 검사',
+                status='pass',
+                severity='info',
+                description='정보 노출 헤더가 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _detect_debug_mode(self) -> None:
         """디버그 모드 감지"""
         if not self.html_content:
+            self._add_detail(
+                id='debug_mode',
+                name='디버그 모드 감지',
+                status='pass',
+                severity='info',
+                description='검사할 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         debug_indicators = [
@@ -252,8 +384,10 @@ class InformationDisclosureScanner(BaseScanner):
             (r'NODE_ENV\s*=\s*development', 'Node.js development mode'),
         ]
 
+        debug_found = None
         for pattern, desc in debug_indicators:
             if re.search(pattern, self.html_content, re.IGNORECASE):
+                debug_found = desc
                 self.issues.append({
                     'type': 'Debug Mode Enabled',
                     'severity': 'high',
@@ -262,9 +396,42 @@ class InformationDisclosureScanner(BaseScanner):
                 })
                 break
 
+        if debug_found:
+            self._add_detail(
+                id='debug_mode',
+                name='디버그 모드 감지',
+                status='fail',
+                severity='high',
+                description=f'디버그 모드 활성화 감지: {debug_found}',
+                value=debug_found,
+                expected='디버그 모드 비활성화',
+                recommendation='프로덕션 환경에서는 디버그 모드를 비활성화하세요.'
+            )
+        else:
+            self._add_detail(
+                id='debug_mode',
+                name='디버그 모드 감지',
+                status='pass',
+                severity='info',
+                description='디버그 모드가 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+
     def _check_source_maps(self) -> None:
         """소스 맵 파일 노출 검사"""
         if not self.html_content:
+            self._add_detail(
+                id='source_maps',
+                name='소스 맵 노출 검사',
+                status='pass',
+                severity='info',
+                description='검사할 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         # 소스 맵 참조 찾기
@@ -275,9 +442,11 @@ class InformationDisclosureScanner(BaseScanner):
             r'\.css\.map'
         ]
 
+        source_map_found = None
         for pattern in source_map_patterns:
             matches = re.findall(pattern, self.html_content)
             if matches:
+                source_map_found = matches[0] if matches else pattern
                 self.issues.append({
                     'type': 'Source Map Exposure',
                     'severity': 'medium',
@@ -286,6 +455,29 @@ class InformationDisclosureScanner(BaseScanner):
                     'recommendation': '프로덕션 환경에서는 소스 맵 파일을 제거하세요.'
                 })
                 break
+
+        if source_map_found:
+            self._add_detail(
+                id='source_maps',
+                name='소스 맵 노출 검사',
+                status='warning',
+                severity='medium',
+                description='소스 맵 파일이 노출됨',
+                value=str(source_map_found)[:50],
+                expected='소스 맵 제거',
+                recommendation='프로덕션 환경에서는 소스 맵 파일을 제거하세요.'
+            )
+        else:
+            self._add_detail(
+                id='source_maps',
+                name='소스 맵 노출 검사',
+                status='pass',
+                severity='info',
+                description='소스 맵 파일이 노출되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _get_recommendation(self, info_type: str) -> str:
         """정보 유형별 권장사항"""

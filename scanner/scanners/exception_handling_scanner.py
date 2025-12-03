@@ -31,6 +31,8 @@ class ExceptionHandlingScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """예외 처리 검사 실행"""
+        # 검사 항목: Stack Trace, DB 에러, 디버그 정보, 경로 노출
+        self.checked = 4
 
         # HTTP 요청 수행
         if not self.html_content and self.url:
@@ -42,6 +44,16 @@ class ExceptionHandlingScanner(BaseScanner):
                 pass
 
         if not self.html_content:
+            self._add_detail(
+                id='exception_handling_check',
+                name='예외 처리 보안 검사',
+                status='pass',
+                severity='info',
+                description='검사할 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         # 모든 에러 패턴 체크
@@ -146,6 +158,31 @@ class ExceptionHandlingScanner(BaseScanner):
             self._test_error_endpoints(self.url)
             self._test_error_injection(self.url)
             self._test_http_error_pages(self.url)
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') in ['critical', 'high']])
+            self._add_detail(
+                id='exception_handling_check',
+                name='예외 처리 보안 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 예외 처리 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='예외 처리 취약점 없음',
+                recommendation='프로덕션에서 디버그 모드를 비활성화하고 일반 에러 메시지를 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='exception_handling_check',
+                name='예외 처리 보안 검사',
+                status='pass',
+                severity='info',
+                description='예외 처리 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _test_error_endpoints(self, base_url):
         """에러 엔드포인트 테스트"""

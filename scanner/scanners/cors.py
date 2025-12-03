@@ -63,99 +63,234 @@ class CORSScanner(BaseScanner):
         acam = self.headers.get('Access-Control-Allow-Methods')
         acah = self.headers.get('Access-Control-Allow-Headers')
 
-        if acao:
-            self._check_wildcard_origin(acao, acac)
-            self._check_null_origin(acao)
-            self._check_reflected_origin(acao)
+        # 검사 항목 수: 4개 (Origin, Credentials, Methods, Headers)
+        self.checked = 4
 
-        # 추가 검사: 위험한 메서드 허용
-        if acam:
-            self._check_dangerous_methods(acam)
+        # 1. Access-Control-Allow-Origin 검사
+        self._check_origin(acao, acac)
 
-        # 추가 검사: 민감한 헤더 허용
-        if acah:
-            self._check_sensitive_headers(acah)
+        # 2. Access-Control-Allow-Credentials 검사
+        self._check_credentials(acao, acac)
 
-    def _check_wildcard_origin(self, acao: str, acac: str) -> None:
-        """와일드카드 오리진 검사"""
-        if acao == '*':
-            if acac and acac.lower() == 'true':
-                # Critical: 와일드카드 + credentials
-                self.issues.append({
-                    'type': 'Critical CORS Misconfiguration',
-                    'severity': 'critical',
-                    'description': 'Access-Control-Allow-Origin: * 와 Credentials: true가 함께 설정되어 있습니다.',
-                    'details': '모든 도메인에서 인증된 요청을 보낼 수 있어 매우 위험합니다.',
-                    'recommendation': '특정 도메인만 허용하거나 Credentials를 비활성화하세요.'
-                })
-            else:
-                # Medium: 와일드카드만
-                self.issues.append({
-                    'type': 'CORS Wildcard',
-                    'severity': 'medium',
-                    'description': 'Access-Control-Allow-Origin: * 가 설정되어 있습니다.',
-                    'details': '모든 도메인에서 리소스에 접근할 수 있습니다.',
-                    'recommendation': '가능한 특정 도메인만 허용하세요.'
-                })
+        # 3. Access-Control-Allow-Methods 검사
+        self._check_methods(acam)
 
-    def _check_null_origin(self, acao: str) -> None:
-        """null 오리진 허용 검사"""
-        if acao.lower() == 'null':
+        # 4. Access-Control-Allow-Headers 검사
+        self._check_headers(acah)
+
+    def _check_origin(self, acao: str, acac: str) -> None:
+        """Access-Control-Allow-Origin 검사"""
+        if not acao:
+            self._add_detail(
+                id='acao',
+                name='Access-Control-Allow-Origin',
+                status='pass',
+                severity='info',
+                description='CORS 헤더 미설정 (Same-Origin Policy 적용)',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+            return
+
+        # 와일드카드 + Credentials 조합 검사
+        if acao == '*' and acac and acac.lower() == 'true':
+            self._add_detail(
+                id='acao',
+                name='Access-Control-Allow-Origin',
+                status='fail',
+                severity='critical',
+                description='와일드카드(*)와 Credentials: true 조합은 매우 위험',
+                value=acao,
+                expected='특정 도메인만 허용',
+                recommendation='특정 도메인만 허용하거나 Credentials를 비활성화하세요.'
+            )
+            self.issues.append({
+                'type': 'Critical CORS Misconfiguration',
+                'severity': 'critical',
+                'description': 'Access-Control-Allow-Origin: * 와 Credentials: true가 함께 설정됨',
+                'recommendation': '특정 도메인만 허용하거나 Credentials를 비활성화하세요.'
+            })
+        elif acao == '*':
+            self._add_detail(
+                id='acao',
+                name='Access-Control-Allow-Origin',
+                status='warning',
+                severity='medium',
+                description='와일드카드(*) 사용 - 모든 도메인에서 접근 가능',
+                value=acao,
+                expected='특정 도메인만 허용',
+                recommendation='가능한 특정 도메인만 허용하세요.'
+            )
+            self.issues.append({
+                'type': 'CORS Wildcard',
+                'severity': 'medium',
+                'description': 'Access-Control-Allow-Origin: * 가 설정되어 있습니다.',
+                'recommendation': '가능한 특정 도메인만 허용하세요.'
+            })
+        elif acao.lower() == 'null':
+            self._add_detail(
+                id='acao',
+                name='Access-Control-Allow-Origin',
+                status='fail',
+                severity='high',
+                description='null 오리진 허용 - sandboxed iframe 우회 가능',
+                value=acao,
+                expected='특정 도메인만 허용',
+                recommendation='null 오리진을 허용하지 마세요.'
+            )
             self.issues.append({
                 'type': 'Null Origin Allowed',
                 'severity': 'high',
                 'description': 'null 오리진이 허용되고 있습니다.',
-                'details': 'sandboxed iframe 등을 통한 우회 공격이 가능합니다.',
                 'recommendation': 'null 오리진을 허용하지 마세요.'
             })
+        else:
+            self._add_detail(
+                id='acao',
+                name='Access-Control-Allow-Origin',
+                status='pass',
+                severity='info',
+                description=f'특정 도메인 허용됨',
+                value=acao,
+                expected=None,
+                recommendation=None
+            )
 
-    def _check_reflected_origin(self, acao: str) -> None:
-        """반사된 오리진 검사 (간접 추정)"""
-        # URL에서 도메인 추출
-        if self.url:
-            parsed = urlparse(self.url)
-            if parsed.netloc and parsed.netloc in acao and acao != parsed.netloc:
-                self.issues.append({
-                    'type': 'Potential Origin Reflection',
-                    'severity': 'medium',
-                    'description': '오리진이 동적으로 반사될 가능성이 있습니다.',
-                    'details': 'Origin 헤더 값을 그대로 반사하면 보안 위험이 있습니다.',
-                    'recommendation': '화이트리스트 기반으로 오리진을 검증하세요.'
-                })
+    def _check_credentials(self, acao: str, acac: str) -> None:
+        """Access-Control-Allow-Credentials 검사"""
+        if not acac:
+            self._add_detail(
+                id='acac',
+                name='Access-Control-Allow-Credentials',
+                status='pass',
+                severity='info',
+                description='Credentials 헤더 미설정 (기본값: false)',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+            return
 
-    def _check_dangerous_methods(self, acam: str) -> None:
-        """위험한 HTTP 메서드 허용 검사"""
+        if acac.lower() == 'true' and acao == '*':
+            # 이미 origin에서 처리됨
+            self._add_detail(
+                id='acac',
+                name='Access-Control-Allow-Credentials',
+                status='fail',
+                severity='critical',
+                description='Credentials: true와 와일드카드 Origin 조합은 위험',
+                value=acac,
+                expected='false 또는 특정 Origin과 함께 사용',
+                recommendation='Credentials 사용 시 특정 도메인만 허용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='acac',
+                name='Access-Control-Allow-Credentials',
+                status='pass',
+                severity='info',
+                description='Credentials 설정됨',
+                value=acac,
+                expected=None,
+                recommendation=None
+            )
+
+    def _check_methods(self, acam: str) -> None:
+        """Access-Control-Allow-Methods 검사"""
+        if not acam:
+            self._add_detail(
+                id='acam',
+                name='Access-Control-Allow-Methods',
+                status='pass',
+                severity='info',
+                description='Methods 헤더 미설정',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+            return
+
         dangerous_methods = ['PUT', 'DELETE', 'PATCH']
         allowed_methods = [m.strip() for m in acam.upper().split(',')]
-
         dangerous_found = [m for m in dangerous_methods if m in allowed_methods]
+
         if dangerous_found:
+            self._add_detail(
+                id='acam',
+                name='Access-Control-Allow-Methods',
+                status='warning',
+                severity='medium',
+                description=f'위험한 메서드 허용: {", ".join(dangerous_found)}',
+                value=acam,
+                expected='GET, POST 등 필요한 메서드만',
+                recommendation='필요한 메서드만 허용하세요.'
+            )
             self.issues.append({
                 'type': 'Dangerous Methods in CORS',
                 'severity': 'medium',
-                'methods': dangerous_found,
-                'description': f'위험한 메서드가 CORS에서 허용됩니다: {", ".join(dangerous_found)}',
+                'description': f'위험한 메서드가 허용됩니다: {", ".join(dangerous_found)}',
                 'recommendation': '필요한 메서드만 허용하세요.'
             })
+        else:
+            self._add_detail(
+                id='acam',
+                name='Access-Control-Allow-Methods',
+                status='pass',
+                severity='info',
+                description='허용된 메서드가 안전함',
+                value=acam,
+                expected=None,
+                recommendation=None
+            )
 
-    def _check_sensitive_headers(self, acah: str) -> None:
-        """민감한 헤더 허용 검사"""
+    def _check_headers(self, acah: str) -> None:
+        """Access-Control-Allow-Headers 검사"""
+        if not acah:
+            self._add_detail(
+                id='acah',
+                name='Access-Control-Allow-Headers',
+                status='pass',
+                severity='info',
+                description='Headers 헤더 미설정',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+            return
+
         sensitive_headers = ['Authorization', 'Cookie', 'X-API-Key']
-        allowed_headers = acah.split(',')
-
-        sensitive_found = []
-        for header in sensitive_headers:
-            if header.lower() in [h.strip().lower() for h in allowed_headers]:
-                sensitive_found.append(header)
+        allowed_headers = [h.strip().lower() for h in acah.split(',')]
+        sensitive_found = [h for h in sensitive_headers if h.lower() in allowed_headers]
 
         if sensitive_found:
+            self._add_detail(
+                id='acah',
+                name='Access-Control-Allow-Headers',
+                status='warning',
+                severity='low',
+                description=f'민감한 헤더 허용: {", ".join(sensitive_found)}',
+                value=acah,
+                expected='필요한 헤더만 허용',
+                recommendation='꼭 필요한 경우가 아니면 민감한 헤더는 제한하세요.'
+            )
             self.issues.append({
                 'type': 'Sensitive Headers in CORS',
                 'severity': 'low',
-                'headers': sensitive_found,
                 'description': f'민감한 헤더가 허용됩니다: {", ".join(sensitive_found)}',
                 'recommendation': '꼭 필요한 경우가 아니면 민감한 헤더는 제한하세요.'
             })
+        else:
+            self._add_detail(
+                id='acah',
+                name='Access-Control-Allow-Headers',
+                status='pass',
+                severity='info',
+                description='허용된 헤더가 안전함',
+                value=acah,
+                expected=None,
+                recommendation=None
+            )
 
     def _get_additional_fields(self) -> Dict[str, Any]:
         """추가 필드 반환"""

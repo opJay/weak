@@ -50,10 +50,38 @@ class RateLimitingScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """Rate Limiting 스캔 실행"""
+        # 검사 항목: Rate Limit 헤더, Retry-After, API, 로그인
+        self.checked = 4
+
         self._check_rate_limit_headers()
         self._check_retry_after()
         self._check_api_rate_limits()
         self._check_login_rate_limits()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') in ['critical', 'high']])
+            self._add_detail(
+                id='rate_limiting_check',
+                name='Rate Limiting 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 Rate Limiting 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='Rate Limiting 취약점 없음',
+                recommendation='API와 로그인에 Rate Limiting을 구현하세요.'
+            )
+        else:
+            self._add_detail(
+                id='rate_limiting_check',
+                name='Rate Limiting 검사',
+                status='pass',
+                severity='info',
+                description='Rate Limiting 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_rate_limit_headers(self) -> None:
         """Rate Limit 헤더 검사"""

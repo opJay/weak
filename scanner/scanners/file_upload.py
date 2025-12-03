@@ -53,19 +53,66 @@ class FileUploadScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """파일 업로드 취약점 검사 실행"""
+        # 검사 항목: 파일 업로드 검사
+        self.checked = 1
+
         if not self.html_content:
-            logger.warning("No HTML content provided for file upload scan")
+            self._add_detail(
+                id='file_upload_check',
+                name='파일 업로드 취약점 검사',
+                status='pass',
+                severity='info',
+                description='검사할 HTML 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         soup = BeautifulSoup(self.html_content, 'html.parser')
         file_inputs = soup.find_all('input', type='file')
 
         if not file_inputs:
+            self._add_detail(
+                id='file_upload_check',
+                name='파일 업로드 취약점 검사',
+                status='pass',
+                severity='info',
+                description='파일 업로드 필드가 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         # 파일 업로드 필드가 있으면 검사
         for idx, file_input in enumerate(file_inputs):
             self._check_file_input(file_input, idx)
+
+        # 결과 요약
+        if self.issues:
+            critical_count = len([i for i in self.issues if i.get('severity') == 'critical'])
+            self._add_detail(
+                id='file_upload_check',
+                name='파일 업로드 취약점 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.issues)}개의 파일 업로드 취약점 발견 ({len(file_inputs)}개 필드 검사)',
+                value=f'Critical: {critical_count}개',
+                expected='파일 업로드 취약점 없음',
+                recommendation='허용할 파일 확장자를 화이트리스트로 제한하고, 서버 사이드에서 파일 내용을 검증하세요.'
+            )
+        else:
+            self._add_detail(
+                id='file_upload_check',
+                name='파일 업로드 취약점 검사',
+                status='pass',
+                severity='info',
+                description=f'{len(file_inputs)}개 파일 업로드 필드 검사 완료',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_file_input(self, file_input, idx: int) -> None:
         """개별 파일 입력 검사"""

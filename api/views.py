@@ -74,9 +74,10 @@ class ScanViewSet(viewsets.ReadOnlyModelViewSet):
             'clickjacking': 'clickjacking',
             'information_disclosure': 'sensitive_data_exposure',
             'info_disclosure': 'sensitive_data_exposure',  # scanners_compat.py 별칭
-            'http_methods': 'http_methods',
-            'sensitive_files': 'sensitive_files',
-            'sensitive_file': 'sensitive_files',  # 별칭 (스캐너 ID)
+            'http_method': 'http_method',
+            'http_methods': 'http_method',  # 레거시 별칭
+            'sensitive_file': 'sensitive_file',
+            'sensitive_files': 'sensitive_file',  # 레거시 별칭
             'mixed_content': 'mixed_content',
             'subresource_integrity': 'subresource_integrity',
             'sri': 'subresource_integrity',  # 별칭

@@ -58,12 +58,40 @@ class AccountEnumerationScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """실제 스캔 로직 실행"""
+        # 검사 항목: 로그인 폼, 에러 메시지 차이
+        self.checked = 2
+
         # 1. 로그인 폼 탐지
         if self.html_content:
             self._detect_login_forms()
 
         # 2. 에러 메시지 차이 탐지
         self._check_error_message_differences()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            medium_count = len([v for v in self.vulnerabilities if v.get('severity') == 'medium'])
+            self._add_detail(
+                id='account_enumeration_check',
+                name='계정 열거 검사',
+                status='fail',
+                severity='medium' if medium_count > 0 else 'low',
+                description=f'{len(self.vulnerabilities)}개의 계정 열거 취약점 발견',
+                value=f'Medium: {medium_count}개',
+                expected='계정 열거 취약점 없음',
+                recommendation='존재하지 않는 계정과 잘못된 비밀번호에 대해 동일한 에러 메시지를 표시하세요.'
+            )
+        else:
+            self._add_detail(
+                id='account_enumeration_check',
+                name='계정 열거 검사',
+                status='pass',
+                severity='info',
+                description='계정 열거 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _build_result(self) -> Dict[str, Any]:
         """결과 구성"""

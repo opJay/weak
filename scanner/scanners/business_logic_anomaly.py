@@ -64,12 +64,40 @@ class BusinessLogicAnomalyScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """실제 스캔 로직 실행"""
+        # 검사 항목: 할인 파라미터, 비즈니스 로직 필드
+        self.checked = 2
+
         # 1. 할인 관련 파라미터 탐지
         self._check_discount_parameters()
 
         # 2. 폼에서 비즈니스 로직 필드 탐지
         if self.html_content:
             self._check_business_logic_fields()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') == 'high'])
+            self._add_detail(
+                id='business_logic_check',
+                name='비즈니스 로직 이상 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 비즈니스 로직 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='비즈니스 로직 취약점 없음',
+                recommendation='할인 로직은 서버에서만 처리하고, 중복 적용을 방지하세요.'
+            )
+        else:
+            self._add_detail(
+                id='business_logic_check',
+                name='비즈니스 로직 이상 검사',
+                status='pass',
+                severity='info',
+                description='비즈니스 로직 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _build_result(self) -> Dict[str, Any]:
         """결과 구성"""

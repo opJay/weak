@@ -66,60 +66,107 @@ class ClickjackingScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """클릭재킹 방어 검사 실행"""
+        # 검사 항목: X-Frame-Options, CSP frame-ancestors
+        self.checked = 2
+
         x_frame_options = self.headers.get('X-Frame-Options')
         csp = self.headers.get('Content-Security-Policy')
 
-        has_xfo = False
-        has_csp_frame = False
-        xfo_value = None
-
-        # X-Frame-Options 검사
+        # 1. X-Frame-Options 검사
         if x_frame_options:
             xfo_value = x_frame_options.upper()
             if xfo_value in ['DENY', 'SAMEORIGIN']:
-                has_xfo = True
+                self._add_detail(
+                    id='x_frame_options',
+                    name='X-Frame-Options',
+                    status='pass',
+                    severity='info',
+                    description=f'클릭재킹 방어 헤더가 올바르게 설정됨',
+                    value=x_frame_options,
+                    expected='DENY 또는 SAMEORIGIN',
+                    recommendation=None
+                )
             elif xfo_value.startswith('ALLOW-FROM'):
-                has_xfo = True
+                self._add_detail(
+                    id='x_frame_options',
+                    name='X-Frame-Options',
+                    status='warning',
+                    severity='low',
+                    description='ALLOW-FROM은 더 이상 권장되지 않음',
+                    value=x_frame_options,
+                    expected='DENY 또는 SAMEORIGIN',
+                    recommendation='CSP frame-ancestors를 사용하세요.'
+                )
                 self.issues.append({
                     'type': 'Deprecated X-Frame-Options',
                     'severity': 'low',
-                    'value': x_frame_options,
                     'description': 'ALLOW-FROM은 더 이상 권장되지 않습니다.',
-                    'details': '최신 브라우저에서 지원하지 않을 수 있습니다.',
                     'recommendation': 'CSP frame-ancestors를 사용하세요.'
                 })
             else:
-                # 잘못된 값
+                self._add_detail(
+                    id='x_frame_options',
+                    name='X-Frame-Options',
+                    status='fail',
+                    severity='high',
+                    description=f'유효하지 않은 값: {x_frame_options}',
+                    value=x_frame_options,
+                    expected='DENY 또는 SAMEORIGIN',
+                    recommendation='DENY, SAMEORIGIN 중 하나를 사용하세요.'
+                )
                 self.issues.append({
                     'type': 'Invalid X-Frame-Options',
                     'severity': 'high',
-                    'value': x_frame_options,
                     'description': f'유효하지 않은 X-Frame-Options 값: {x_frame_options}',
                     'recommendation': 'DENY, SAMEORIGIN 중 하나를 사용하세요.'
                 })
+        else:
+            self._add_detail(
+                id='x_frame_options',
+                name='X-Frame-Options',
+                status='fail',
+                severity='high',
+                description='X-Frame-Options 헤더가 설정되지 않음',
+                value=None,
+                expected='DENY 또는 SAMEORIGIN',
+                recommendation='X-Frame-Options: DENY를 설정하세요.'
+            )
 
-        # CSP frame-ancestors 검사
-        if csp:
-            if 'frame-ancestors' in csp:
-                has_csp_frame = True
-                # frame-ancestors 값 분석
-                self._analyze_frame_ancestors(csp)
+        # 2. CSP frame-ancestors 검사
+        if csp and 'frame-ancestors' in csp:
+            frame_ancestors_result = self._analyze_frame_ancestors(csp)
+            self._add_detail(
+                id='csp_frame_ancestors',
+                name='CSP frame-ancestors',
+                status=frame_ancestors_result['status'],
+                severity=frame_ancestors_result['severity'],
+                description=frame_ancestors_result['description'],
+                value=frame_ancestors_result.get('value'),
+                expected="'self' 또는 특정 도메인",
+                recommendation=frame_ancestors_result.get('recommendation')
+            )
+        else:
+            self._add_detail(
+                id='csp_frame_ancestors',
+                name='CSP frame-ancestors',
+                status='warning' if x_frame_options else 'fail',
+                severity='medium' if x_frame_options else 'high',
+                description='CSP frame-ancestors가 설정되지 않음',
+                value=None,
+                expected="frame-ancestors 'self'",
+                recommendation="CSP에 frame-ancestors 'self' 추가를 권장합니다."
+            )
 
-        # 둘 다 없으면 취약
-        if not has_xfo and not has_csp_frame:
+        # 둘 다 없으면 취약점 추가
+        if not x_frame_options and not (csp and 'frame-ancestors' in csp):
             self.issues.append({
                 'type': 'Missing Clickjacking Protection',
                 'severity': 'high',
                 'description': 'X-Frame-Options 또는 CSP frame-ancestors가 설정되지 않았습니다.',
-                'details': '악의적인 사이트가 iframe으로 이 페이지를 포함할 수 있습니다.',
                 'recommendation': 'X-Frame-Options: DENY 또는 CSP frame-ancestors를 설정하세요.'
             })
 
-        # HTML에서 JavaScript framebuster 검사 (추가 보호)
-        if self.html_content:
-            self._check_framebuster()
-
-    def _analyze_frame_ancestors(self, csp: str) -> None:
+    def _analyze_frame_ancestors(self, csp: str) -> Dict[str, Any]:
         """frame-ancestors 디렉티브 분석"""
         import re
         match = re.search(r"frame-ancestors\s+([^;]+)", csp)
@@ -129,10 +176,35 @@ class ClickjackingScanner(BaseScanner):
                 self.issues.append({
                     'type': 'Weak frame-ancestors',
                     'severity': 'medium',
-                    'value': value,
                     'description': 'frame-ancestors가 모든 도메인을 허용합니다.',
                     'recommendation': "frame-ancestors 'self' 또는 특정 도메인만 허용하세요."
                 })
+                return {
+                    'status': 'warning',
+                    'severity': 'medium',
+                    'description': 'frame-ancestors가 모든 도메인을 허용함',
+                    'value': value,
+                    'recommendation': "frame-ancestors 'self' 또는 특정 도메인만 허용하세요."
+                }
+            elif "'none'" in value or "'self'" in value:
+                return {
+                    'status': 'pass',
+                    'severity': 'info',
+                    'description': 'frame-ancestors가 안전하게 설정됨',
+                    'value': value
+                }
+            else:
+                return {
+                    'status': 'pass',
+                    'severity': 'info',
+                    'description': f'frame-ancestors 설정됨: {value}',
+                    'value': value
+                }
+        return {
+            'status': 'fail',
+            'severity': 'high',
+            'description': 'frame-ancestors 파싱 실패'
+        }
 
     def _check_framebuster(self) -> None:
         """JavaScript framebuster 코드 검사"""

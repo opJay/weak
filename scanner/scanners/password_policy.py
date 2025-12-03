@@ -50,10 +50,56 @@ class PasswordPolicyScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """비밀번호 정책 스캔 실행"""
+        # 검사 항목: 필드 보안, 복잡도, Brute Force 방어, 재설정
+        self.checked = 4
+
         self._check_password_fields()
         self._check_password_complexity()
         self._check_brute_force_protection()
         self._check_password_reset()
+
+        # 비밀번호 필드 존재 확인
+        has_password = False
+        if self.html_content:
+            soup = BeautifulSoup(self.html_content, 'html.parser')
+            password_fields = soup.find_all('input', {'type': 'password'})
+            has_password = len(password_fields) > 0
+
+        # 결과 요약
+        if not has_password:
+            self._add_detail(
+                id='password_policy_check',
+                name='비밀번호 정책 검사',
+                status='pass',
+                severity='info',
+                description='비밀번호 필드가 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+        elif self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') in ['critical', 'high']])
+            self._add_detail(
+                id='password_policy_check',
+                name='비밀번호 정책 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 비밀번호 정책 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='비밀번호 정책 취약점 없음',
+                recommendation='복잡도 요구사항, Brute Force 방어를 구현하세요.'
+            )
+        else:
+            self._add_detail(
+                id='password_policy_check',
+                name='비밀번호 정책 검사',
+                status='pass',
+                severity='info',
+                description='비밀번호 정책 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_password_fields(self) -> None:
         """비밀번호 입력 필드 검사"""

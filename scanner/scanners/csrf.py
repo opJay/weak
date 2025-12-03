@@ -81,8 +81,19 @@ class CSRFScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """CSRF 보호 검사 실행"""
+        if not self.html_content:
+            self.checked = 0
+            return
+
+        soup = BeautifulSoup(self.html_content, 'html.parser')
+        forms = soup.find_all('form')
+        state_changing_forms = [f for f in forms if f.get('method', 'GET').upper() in self.STATE_CHANGING_METHODS]
+
+        # 검사 항목: 폼 CSRF, AJAX CSRF, SameSite 쿠키
+        self.checked = len(state_changing_forms) + 2  # 폼 수 + AJAX + SameSite
+
         # 1. 폼의 CSRF 토큰 검사
-        self._scan_forms_for_csrf()
+        self._scan_forms_for_csrf(state_changing_forms)
 
         # 2. AJAX 요청의 CSRF 보호 검사
         self._scan_ajax_csrf_protection()
@@ -90,70 +101,85 @@ class CSRFScanner(BaseScanner):
         # 3. SameSite 쿠키 속성 검사
         self._check_samesite_cookies()
 
-        # 4. Referer/Origin 검증 힌트 검사
-        self._check_referer_validation()
-
-    def _scan_forms_for_csrf(self) -> None:
+    def _scan_forms_for_csrf(self, forms: list) -> None:
         """폼에서 CSRF 토큰 검사"""
-        if not self.html_content:
-            return
-
-        soup = BeautifulSoup(self.html_content, 'html.parser')
-        forms = soup.find_all('form')
-
         for idx, form in enumerate(forms):
             method = form.get('method', 'GET').upper()
             action = form.get('action', '')
+            form_id = f'form_{idx}'
+            form_name = action if action else f'Form #{idx + 1}'
 
-            # 상태 변경 메서드인 경우만 검사
-            if method in self.STATE_CHANGING_METHODS:
-                has_csrf_token = False
-                csrf_field = None
+            has_csrf_token = False
+            csrf_field = None
+            token_empty = False
 
-                # CSRF 토큰 필드 찾기
-                inputs = form.find_all('input')
-                for input_field in inputs:
-                    input_name = input_field.get('name', '').lower()
-                    input_type = input_field.get('type', '')
+            # CSRF 토큰 필드 찾기
+            inputs = form.find_all('input')
+            for input_field in inputs:
+                input_name = input_field.get('name', '').lower()
 
-                    # CSRF 토큰 패턴 매칭
-                    for pattern in self.CSRF_TOKEN_PATTERNS:
-                        if re.search(pattern, input_name, re.IGNORECASE):
-                            has_csrf_token = True
-                            csrf_field = input_name
-                            # 토큰 값이 비어있는지 확인
-                            if not input_field.get('value'):
-                                self.issues.append({
-                                    'type': 'Empty CSRF Token',
-                                    'severity': 'high',
-                                    'form_index': idx,
-                                    'field': csrf_field,
-                                    'description': 'CSRF 토큰 필드가 있지만 값이 비어있습니다.',
-                                    'recommendation': '서버에서 고유한 CSRF 토큰을 생성하여 설정하세요.'
-                                })
-                            break
+                for pattern in self.CSRF_TOKEN_PATTERNS:
+                    if re.search(pattern, input_name, re.IGNORECASE):
+                        has_csrf_token = True
+                        csrf_field = input_name
+                        if not input_field.get('value'):
+                            token_empty = True
+                        break
 
-                if not has_csrf_token:
-                    # 민감한 작업인지 확인
-                    is_sensitive = self._is_sensitive_action(form)
-
-                    self.issues.append({
-                        'type': 'Missing CSRF Token',
-                        'severity': 'critical' if is_sensitive else 'high',
-                        'form_index': idx,
-                        'method': method,
-                        'action': action,
-                        'is_sensitive': is_sensitive,
-                        'description': f'{method} 폼에 CSRF 토큰이 없습니다.',
-                        'recommendation': 'CSRF 토큰을 추가하여 요청의 정당성을 검증하세요.'
-                    })
+            if has_csrf_token and not token_empty:
+                self._add_detail(
+                    id=form_id,
+                    name=f'{method} {form_name}',
+                    status='pass',
+                    severity='info',
+                    description=f'CSRF 토큰 발견: {csrf_field}',
+                    value=csrf_field,
+                    expected='CSRF 토큰 필드',
+                    recommendation=None
+                )
+            elif has_csrf_token and token_empty:
+                self._add_detail(
+                    id=form_id,
+                    name=f'{method} {form_name}',
+                    status='warning',
+                    severity='high',
+                    description='CSRF 토큰 필드는 있지만 값이 비어있음',
+                    value=f'{csrf_field}=(empty)',
+                    expected='유효한 토큰 값',
+                    recommendation='서버에서 고유한 CSRF 토큰을 생성하여 설정하세요.'
+                )
+                self.issues.append({
+                    'type': 'Empty CSRF Token',
+                    'severity': 'high',
+                    'form_index': idx,
+                    'description': 'CSRF 토큰 필드가 있지만 값이 비어있습니다.',
+                    'recommendation': '서버에서 고유한 CSRF 토큰을 생성하여 설정하세요.'
+                })
+            else:
+                is_sensitive = self._is_sensitive_action(form)
+                severity = 'critical' if is_sensitive else 'high'
+                self._add_detail(
+                    id=form_id,
+                    name=f'{method} {form_name}',
+                    status='fail',
+                    severity=severity,
+                    description=f'CSRF 토큰 없음' + (' (민감한 작업)' if is_sensitive else ''),
+                    value=None,
+                    expected='CSRF 토큰 필드',
+                    recommendation='CSRF 토큰을 추가하여 요청의 정당성을 검증하세요.'
+                )
+                self.issues.append({
+                    'type': 'Missing CSRF Token',
+                    'severity': severity,
+                    'form_index': idx,
+                    'method': method,
+                    'action': action,
+                    'description': f'{method} 폼에 CSRF 토큰이 없습니다.',
+                    'recommendation': 'CSRF 토큰을 추가하여 요청의 정당성을 검증하세요.'
+                })
 
     def _scan_ajax_csrf_protection(self) -> None:
         """AJAX 요청의 CSRF 보호 검사"""
-        if not self.html_content:
-            return
-
-        # JavaScript에서 CSRF 토큰 사용 패턴 찾기
         ajax_patterns = [
             r'XMLHttpRequest',
             r'\.ajax\(',
@@ -161,7 +187,6 @@ class CSRFScanner(BaseScanner):
             r'axios\.'
         ]
 
-        # CSRF 토큰이 헤더에 설정되는지 확인
         csrf_header_patterns = [
             r'setRequestHeader\s*\(\s*["\']X-CSRF',
             r'headers\s*:\s*{[^}]*csrf',
@@ -172,64 +197,120 @@ class CSRFScanner(BaseScanner):
         has_ajax = any(re.search(p, self.html_content, re.IGNORECASE) for p in ajax_patterns)
         has_csrf_header = any(re.search(p, self.html_content, re.IGNORECASE) for p in csrf_header_patterns)
 
-        if has_ajax and not has_csrf_header:
-            # 메타 태그에서 CSRF 토큰 확인
+        if not has_ajax:
+            self._add_detail(
+                id='ajax_csrf',
+                name='AJAX CSRF 보호',
+                status='pass',
+                severity='info',
+                description='AJAX 요청이 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+        elif has_csrf_header:
+            self._add_detail(
+                id='ajax_csrf',
+                name='AJAX CSRF 보호',
+                status='pass',
+                severity='info',
+                description='AJAX 요청에 CSRF 헤더 설정 감지됨',
+                value='X-CSRF-Token 헤더 사용',
+                expected='CSRF 헤더',
+                recommendation=None
+            )
+        else:
             soup = BeautifulSoup(self.html_content, 'html.parser')
             csrf_meta = soup.find('meta', attrs={'name': re.compile('csrf', re.IGNORECASE)})
 
-            if not csrf_meta:
+            if csrf_meta:
+                self._add_detail(
+                    id='ajax_csrf',
+                    name='AJAX CSRF 보호',
+                    status='pass',
+                    severity='info',
+                    description='CSRF 메타 태그 발견',
+                    value=csrf_meta.get('content', '')[:50],
+                    expected='CSRF 토큰',
+                    recommendation=None
+                )
+            else:
+                self._add_detail(
+                    id='ajax_csrf',
+                    name='AJAX CSRF 보호',
+                    status='fail',
+                    severity='high',
+                    description='AJAX 사용 감지되었으나 CSRF 보호 없음',
+                    value=None,
+                    expected='X-CSRF-Token 헤더 또는 메타 태그',
+                    recommendation='AJAX 요청에 X-CSRF-Token 헤더를 추가하세요.'
+                )
                 self.issues.append({
                     'type': 'AJAX CSRF Protection Missing',
                     'severity': 'high',
                     'description': 'AJAX 요청에 CSRF 토큰이 포함되지 않은 것 같습니다.',
-                    'evidence': 'AJAX 사용은 감지되었으나 CSRF 헤더 설정이 없음',
                     'recommendation': 'AJAX 요청에 X-CSRF-Token 헤더를 추가하세요.'
                 })
 
     def _check_samesite_cookies(self) -> None:
         """SameSite 쿠키 속성 검사"""
-        # Set-Cookie 헤더 확인
-        if self.headers:
-            set_cookie = self.headers.get('Set-Cookie', '')
-            if set_cookie:
-                # SameSite 속성 확인
-                if 'SameSite' not in set_cookie:
-                    self.issues.append({
-                        'type': 'Missing SameSite Cookie Attribute',
-                        'severity': 'medium',
-                        'description': '쿠키에 SameSite 속성이 설정되지 않았습니다.',
-                        'recommendation': 'SameSite=Strict 또는 SameSite=Lax를 설정하여 CSRF를 방지하세요.'
-                    })
-                elif 'SameSite=None' in set_cookie:
-                    self.issues.append({
-                        'type': 'Weak SameSite Cookie',
-                        'severity': 'medium',
-                        'description': 'SameSite=None은 CSRF 보호를 제공하지 않습니다.',
-                        'recommendation': 'SameSite=Strict 또는 Lax를 사용하세요.'
-                    })
+        set_cookie = self.headers.get('Set-Cookie', '') if self.headers else ''
 
-    def _check_referer_validation(self) -> None:
-        """Referer/Origin 검증 힌트 찾기"""
-        if not self.html_content:
-            return
-
-        # JavaScript에서 Referer/Origin 검증 패턴
-        validation_patterns = [
-            r'document\.referrer',
-            r'origin\s*===',
-            r'referer\s*===',
-            r'window\.location\.origin'
-        ]
-
-        has_validation = any(re.search(p, self.html_content, re.IGNORECASE) for p in validation_patterns)
-
-        # Referer 검증이 없고 CSRF 토큰도 없는 경우
-        if not has_validation and len([i for i in self.issues if 'Missing CSRF Token' in i['type']]) > 0:
+        if not set_cookie:
+            self._add_detail(
+                id='samesite_cookie',
+                name='SameSite 쿠키',
+                status='pass',
+                severity='info',
+                description='Set-Cookie 헤더 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+        elif 'SameSite=Strict' in set_cookie or 'SameSite=Lax' in set_cookie:
+            self._add_detail(
+                id='samesite_cookie',
+                name='SameSite 쿠키',
+                status='pass',
+                severity='info',
+                description='SameSite 속성이 안전하게 설정됨',
+                value='Strict' if 'Strict' in set_cookie else 'Lax',
+                expected='Strict 또는 Lax',
+                recommendation=None
+            )
+        elif 'SameSite=None' in set_cookie:
+            self._add_detail(
+                id='samesite_cookie',
+                name='SameSite 쿠키',
+                status='warning',
+                severity='medium',
+                description='SameSite=None은 CSRF 보호를 제공하지 않음',
+                value='None',
+                expected='Strict 또는 Lax',
+                recommendation='SameSite=Strict 또는 Lax를 사용하세요.'
+            )
             self.issues.append({
-                'type': 'No Secondary CSRF Protection',
-                'severity': 'low',
-                'description': 'CSRF 토큰 외에 추가적인 보호 메커니즘이 없습니다.',
-                'recommendation': 'Referer/Origin 헤더 검증을 추가 보호 계층으로 구현하세요.'
+                'type': 'Weak SameSite Cookie',
+                'severity': 'medium',
+                'description': 'SameSite=None은 CSRF 보호를 제공하지 않습니다.',
+                'recommendation': 'SameSite=Strict 또는 Lax를 사용하세요.'
+            })
+        else:
+            self._add_detail(
+                id='samesite_cookie',
+                name='SameSite 쿠키',
+                status='warning',
+                severity='medium',
+                description='SameSite 속성이 설정되지 않음',
+                value=None,
+                expected='SameSite=Strict 또는 Lax',
+                recommendation='SameSite=Strict 또는 SameSite=Lax를 설정하세요.'
+            )
+            self.issues.append({
+                'type': 'Missing SameSite Cookie Attribute',
+                'severity': 'medium',
+                'description': '쿠키에 SameSite 속성이 설정되지 않았습니다.',
+                'recommendation': 'SameSite=Strict 또는 SameSite=Lax를 설정하여 CSRF를 방지하세요.'
             })
 
     def _is_sensitive_action(self, form) -> bool:

@@ -52,14 +52,53 @@ class OAuthSecurityScanner(BaseScanner):
         """OAuth 보안 스캔 실행"""
         # OAuth 사용 여부 탐지
         if not self._detect_oauth():
+            self.checked = 0
             self.vulnerabilities = []
+            self._add_detail(
+                id='oauth_check',
+                name='OAuth 보안 검사',
+                status='pass',
+                severity='info',
+                description='OAuth 사용이 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
+
+        # 검사 항목: State 파라미터, Redirect URI, 토큰 노출, Implicit Flow
+        self.checked = 4
 
         # 각 보안 검사 수행
         self._check_state_parameter()
         self._check_redirect_uri_validation()
         self._check_token_exposure()
         self._check_implicit_flow()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') in ['critical', 'high']])
+            self._add_detail(
+                id='oauth_check',
+                name='OAuth 보안 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 OAuth 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='OAuth 취약점 없음',
+                recommendation='state 파라미터 사용, PKCE 적용, redirect_uri 검증을 구현하세요.'
+            )
+        else:
+            self._add_detail(
+                id='oauth_check',
+                name='OAuth 보안 검사',
+                status='pass',
+                severity='info',
+                description='OAuth 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _detect_oauth(self) -> bool:
         """OAuth 사용 여부 탐지"""

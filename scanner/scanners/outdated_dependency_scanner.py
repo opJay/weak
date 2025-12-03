@@ -81,6 +81,9 @@ class OutdatedDependencyScanner(BaseScanner):
 
     def _execute_scan(self):
         """스캔 실행"""
+        # 검사 항목: 종속성 버전, CDN 라이브러리, 런타임 버전
+        self.checked = 3
+
         # 1. 종속성 파일에서 버전 검사
         self._check_dependency_versions()
 
@@ -89,6 +92,31 @@ class OutdatedDependencyScanner(BaseScanner):
 
         # 3. Runtime 버전 검사
         self._check_runtime_versions()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='outdated_dependency_check',
+                name='오래된 종속성 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 오래된/취약한 종속성 발견',
+                value=f'Critical: {critical_count}개',
+                expected='오래된/취약한 종속성 없음',
+                recommendation='모든 종속성을 최신 안정 버전으로 업데이트하세요.'
+            )
+        else:
+            self._add_detail(
+                id='outdated_dependency_check',
+                name='오래된 종속성 검사',
+                status='pass',
+                severity='info',
+                description='오래된/취약한 종속성이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_dependency_versions(self):
         """종속성 파일에서 버전 검사"""

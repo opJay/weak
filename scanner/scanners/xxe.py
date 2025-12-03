@@ -53,12 +53,40 @@ class XXEScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """XXE 취약점 검사 실행"""
+        # 검사 항목: XML 지원, DOCTYPE, XML 업로드
+        self.checked = 3
+
         if self.response:
             self._check_xml_support()
 
         if self.html_content:
             self._check_doctype()
             self._check_xml_upload()
+
+        # 결과 요약
+        if self.issues:
+            high_count = len([i for i in self.issues if i.get('severity') == 'high'])
+            self._add_detail(
+                id='xxe_check',
+                name='XXE 취약점 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.issues)}개의 XXE 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='XXE 취약점 없음',
+                recommendation='XML 파서의 외부 엔티티 처리를 비활성화하세요.'
+            )
+        else:
+            self._add_detail(
+                id='xxe_check',
+                name='XXE 취약점 검사',
+                status='pass',
+                severity='info',
+                description='XXE 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_xml_support(self) -> None:
         """XML 처리 지원 여부 확인"""

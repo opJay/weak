@@ -30,7 +30,7 @@ class SubresourceIntegrityScanner(BaseScanner):
         'icon': '🔒',
         'description': 'Subresource Integrity 검증',
         'weight': 0.5,
-        'field': 'sri_check',
+        'field': 'subresource_integrity',
         'category': 'security_basic',
         'OWASP': 'A08:2025',
     }
@@ -58,9 +58,30 @@ class SubresourceIntegrityScanner(BaseScanner):
     def _execute_scan(self) -> None:
         """SRI 검사 실행"""
         if not self.html_content:
+            self.checked = 0
+            self._add_detail(
+                id='sri_check',
+                name='SRI 검사',
+                status='pass',
+                severity='info',
+                description='검사할 HTML 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         soup = BeautifulSoup(self.html_content, 'html.parser')
+
+        # 외부 리소스 수 계산 (검사 대상)
+        scripts = soup.find_all('script', src=True)
+        stylesheets = soup.find_all('link', rel='stylesheet', href=True)
+        external_count = 0
+        for resource in scripts + stylesheets:
+            url = resource.get('src') or resource.get('href')
+            if self._is_external_resource(url):
+                external_count += 1
+        self.checked = external_count if external_count > 0 else 1
 
         # 스크립트 태그 검사
         scripts = soup.find_all('script', src=True)
@@ -69,6 +90,45 @@ class SubresourceIntegrityScanner(BaseScanner):
         # 링크(스타일시트) 태그 검사
         stylesheets = soup.find_all('link', rel='stylesheet', href=True)
         self._check_resources(stylesheets, 'stylesheet')
+
+        # 전체 결과 요약
+        missing_sri = len([i for i in self.issues if i.get('type') == 'Missing SRI'])
+        cdn_missing = len([i for i in self.issues if i.get('type') == 'Missing SRI' and i.get('is_cdn')])
+
+        if missing_sri > 0:
+            severity = 'high' if cdn_missing > 0 else 'medium'
+            self._add_detail(
+                id='sri_check',
+                name='SRI 검사',
+                status='fail',
+                severity=severity,
+                description=f'{missing_sri}개 외부 리소스에 SRI 없음 (CDN: {cdn_missing}개)',
+                value=f'총 외부 리소스: {external_count}개',
+                expected='모든 외부 리소스에 integrity 속성',
+                recommendation='외부 스크립트/스타일시트에 integrity 속성을 추가하세요.'
+            )
+        elif external_count > 0:
+            self._add_detail(
+                id='sri_check',
+                name='SRI 검사',
+                status='pass',
+                severity='info',
+                description=f'{external_count}개 외부 리소스 모두 SRI 적용됨',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+        else:
+            self._add_detail(
+                id='sri_check',
+                name='SRI 검사',
+                status='pass',
+                severity='info',
+                description='외부 리소스 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_resources(self, resources: List, resource_type: str) -> None:
         """리소스들의 SRI 검사"""

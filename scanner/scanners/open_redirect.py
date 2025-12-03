@@ -55,8 +55,21 @@ class OpenRedirectScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """Open Redirect 취약점 검사 실행"""
+        # 검사 항목: 오픈 리다이렉트 검사
+        self.checked = 1
+
         if not self.url:
             logger.warning("No URL provided for open redirect scan")
+            self._add_detail(
+                id='open_redirect',
+                name='오픈 리다이렉트 검사',
+                status='pass',
+                severity='info',
+                description='검사할 URL 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         try:
@@ -66,13 +79,29 @@ class OpenRedirectScanner(BaseScanner):
             # 파라미터가 없으면 종료
             if not params:
                 logger.debug(f"No query parameters in URL: {self.url}")
+                self._add_detail(
+                    id='open_redirect',
+                    name='오픈 리다이렉트 검사',
+                    status='pass',
+                    severity='info',
+                    description='URL 파라미터 없음',
+                    value=None,
+                    expected=None,
+                    recommendation=None
+                )
                 return
 
             # 리다이렉트 관련 파라미터 찾기
             found_params = []
+            url_value_params = []
             for param_name in params.keys():
                 if param_name.lower() in self.REDIRECT_PARAMS:
                     found_params.append(param_name)
+                    # 파라미터 값이 URL 형태인지 추가 확인
+                    for value in params[param_name]:
+                        if self._is_url_like(value):
+                            url_value_params.append(param_name)
+                            break
 
             # 취약한 파라미터 발견 시 이슈 추가
             if found_params:
@@ -85,23 +114,65 @@ class OpenRedirectScanner(BaseScanner):
                     'recommendation': '리다이렉트 URL을 화이트리스트로 검증하세요.'
                 })
 
-                # 파라미터 값이 URL 형태인지 추가 확인 (선택적)
-                for param_name in found_params:
+                for param_name in url_value_params:
                     for value in params[param_name]:
-                        # URL 패턴 체크 (http://, https://, //, ./ 등)
                         if self._is_url_like(value):
                             self.issues.append({
                                 'type': 'Open Redirect with URL Value',
                                 'severity': 'high',
                                 'parameter': param_name,
-                                'value': value[:100],  # 처음 100자만
+                                'value': value[:100],
                                 'description': f'파라미터 "{param_name}"에 URL 값이 포함되어 있습니다.',
                                 'recommendation': '외부 URL로의 리다이렉트를 차단하거나 화이트리스트를 사용하세요.'
                             })
 
+            # 결과 요약
+            if url_value_params:
+                self._add_detail(
+                    id='open_redirect',
+                    name='오픈 리다이렉트 검사',
+                    status='fail',
+                    severity='high',
+                    description=f'URL 값을 포함한 리다이렉트 파라미터 발견: {", ".join(url_value_params)}',
+                    value=', '.join(url_value_params),
+                    expected='리다이렉트 URL 검증',
+                    recommendation='외부 URL로의 리다이렉트를 차단하거나 화이트리스트를 사용하세요.'
+                )
+            elif found_params:
+                self._add_detail(
+                    id='open_redirect',
+                    name='오픈 리다이렉트 검사',
+                    status='warning',
+                    severity='medium',
+                    description=f'잠재적 리다이렉트 파라미터 발견: {", ".join(found_params)}',
+                    value=', '.join(found_params),
+                    expected='리다이렉트 URL 검증',
+                    recommendation='리다이렉트 URL을 화이트리스트로 검증하세요.'
+                )
+            else:
+                self._add_detail(
+                    id='open_redirect',
+                    name='오픈 리다이렉트 검사',
+                    status='pass',
+                    severity='info',
+                    description='리다이렉트 관련 파라미터가 발견되지 않음',
+                    value=f'{len(params)}개 파라미터 검사',
+                    expected=None,
+                    recommendation=None
+                )
+
         except Exception as e:
             logger.error(f"Error during open redirect scan: {str(e)}")
-            # BaseScanner가 예외 처리하므로 re-raise하지 않음
+            self._add_detail(
+                id='open_redirect',
+                name='오픈 리다이렉트 검사',
+                status='pass',
+                severity='info',
+                description='검사 중 오류 발생',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _is_url_like(self, value: str) -> bool:
         """값이 URL 형태인지 확인"""

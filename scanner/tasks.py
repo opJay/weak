@@ -349,7 +349,8 @@ def scan_security(scan_request_id):
             from .scanners.security_header_scanner import SecurityHeaderScanner
             header_scanner = SecurityHeaderScanner(response.headers)
             header_results = header_scanner.scan()
-            security_result.security_headers = header_results['headers']
+            # header_results 전체를 저장하여 checked, status 등 메타데이터 유지
+            security_result.security_headers = header_results
 
             # 메타데이터 수집
             if meta := collect_scanner_metadata(SecurityHeaderScanner, header_results):
@@ -402,11 +403,7 @@ def scan_security(scan_request_id):
             from .scanners.xss_scanner import XSSScanner
             xss_scanner = XSSScanner(scan_request.url)
             xss_results = xss_scanner.scan()
-            security_result.xss_vulnerabilities = {
-                'total': xss_results['total'],
-                'has_xss': xss_results['has_xss'],
-                'vulnerabilities': xss_results['vulnerabilities']
-            }
+            security_result.xss_vulnerabilities = xss_results
 
             # 메타데이터 수집
             if meta := collect_scanner_metadata(XSSScanner, xss_results):
@@ -439,11 +436,7 @@ def scan_security(scan_request_id):
             from .scanners.sql_injection_scanner import SQLInjectionScanner
             sqli_scanner = SQLInjectionScanner(scan_request.url)
             sqli_results = sqli_scanner.scan()
-            security_result.sql_injection = {
-                'total': sqli_results['total'],
-                'has_sqli': sqli_results['has_sqli'],
-                'vulnerabilities': sqli_results['vulnerabilities']
-            }
+            security_result.sql_injection = sqli_results
             if meta := collect_scanner_metadata(SQLInjectionScanner, sqli_results):
                 scanner_metadata.append(meta)
 
@@ -596,6 +589,7 @@ def scan_security(scan_request_id):
         method_results = method_scanner.scan()
         if meta := collect_scanner_metadata(HTTPMethodScanner, method_results):
             scanner_metadata.append(meta)
+        security_result.http_method = method_results
 
         for issue in method_results['issues']:
             Vulnerability.objects.create(
@@ -618,6 +612,7 @@ def scan_security(scan_request_id):
         file_results = file_scanner.scan()
         if meta := collect_scanner_metadata(SensitiveFileScanner, file_results):
             scanner_metadata.append(meta)
+        security_result.sensitive_file = file_results
 
         for issue in file_results['issues'][:5]:
             Vulnerability.objects.create(
@@ -641,6 +636,7 @@ def scan_security(scan_request_id):
         mixed_results = mixed_scanner.scan()
         if meta := collect_scanner_metadata(MixedContentScanner, mixed_results):
             scanner_metadata.append(meta)
+        security_result.mixed_content = mixed_results
 
         for issue in mixed_results['issues']:
             Vulnerability.objects.create(
@@ -663,6 +659,7 @@ def scan_security(scan_request_id):
         sri_results = sri_scanner.scan()
         if meta := collect_scanner_metadata(SubresourceIntegrityScanner, sri_results):
             scanner_metadata.append(meta)
+        security_result.subresource_integrity = sri_results
 
         for issue in sri_results['issues']:
             Vulnerability.objects.create(
@@ -685,6 +682,7 @@ def scan_security(scan_request_id):
         listing_results = listing_scanner.scan()
         if meta := collect_scanner_metadata(DirectoryListingScanner, listing_results):
             scanner_metadata.append(meta)
+        security_result.directory_listing = listing_results
 
         for issue in listing_results['issues']:
             Vulnerability.objects.create(

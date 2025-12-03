@@ -36,6 +36,9 @@ class SerializationIntegrityScanner(BaseScanner):
 
     def _execute_scan(self):
         """스캔 실행"""
+        # 검사 항목: 쿠키 서명, 직렬화 포맷, Base64 객체, JSON 무결성
+        self.checked = 4
+
         # 1. 서명되지 않은 쿠키/세션 검사
         self._check_unsigned_cookies()
 
@@ -47,6 +50,31 @@ class SerializationIntegrityScanner(BaseScanner):
 
         # 4. JSON 무결성 검사
         self._check_json_integrity()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='serialization_integrity_check',
+                name='직렬화 무결성 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 직렬화 무결성 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='직렬화 무결성 취약점 없음',
+                recommendation='안전한 직렬화 방식(JSON)과 서명을 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='serialization_integrity_check',
+                name='직렬화 무결성 검사',
+                status='pass',
+                severity='info',
+                description='직렬화 무결성 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_unsigned_cookies(self):
         """서명되지 않은 쿠키 검사"""

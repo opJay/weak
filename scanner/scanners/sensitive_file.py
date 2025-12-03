@@ -30,38 +30,95 @@ class SensitiveFileScanner(BaseScanner):
         'icon': '📄',
         'description': '민감한 파일 노출 검사',
         'weight': 1,
-        'field': 'sensitive_files',
+        'field': 'sensitive_file',
         'category': 'security_basic',
         'enabled': True
     }
 
     # 스캐너 메타데이터
 
-    # 민감한 파일 목록
+    # 민감한 파일 목록 (다양한 WAS/프레임워크/클라우드 환경 지원)
     SENSITIVE_FILES = [
-        # 설정 파일 (우선순위 높음)
-        '.env', '.env.local', '.env.production', 'config.php',
+        # ===== 환경 설정 (Critical) =====
+        '.env', '.env.local', '.env.production', '.env.development',
 
-        # 버전 관리
-        '.git/config', '.git/HEAD', '.svn/entries', '.hg/hgrc',
+        # ===== 버전 관리 (Critical) =====
+        '.git/config', '.git/HEAD', '.gitignore',
+        '.svn/entries', '.svn/wc.db',
+        '.hg/hgrc',
 
-        # 백업 파일
+        # ===== 백업/덤프 (Critical) =====
         'backup.sql', 'database.sql', 'db.sql', 'dump.sql',
         'backup.zip', 'backup.tar.gz', 'site.zip', 'www.zip',
 
-        # 추가 설정 파일
-        'configuration.php', 'settings.py', 'web.config',
+        # ===== Java/Spring =====
+        'application.properties', 'application.yml', 'application-dev.yml',
+        'WEB-INF/web.xml', 'META-INF/context.xml',
+        'pom.xml', 'build.gradle',
 
-        # 로그 파일
-        'error.log', 'access.log', 'error_log', 'debug.log',
+        # ===== Node.js =====
+        'package.json', 'package-lock.json', 'yarn.lock',
+        '.npmrc', '.yarnrc',
 
-        # 기타
-        'phpinfo.php', '.htaccess', 'composer.json', 'package.json',
-        'Dockerfile', 'docker-compose.yml', 'robots.txt', 'sitemap.xml',
+        # ===== Python/Django/Flask =====
+        'settings.py', 'local_settings.py',
+        'requirements.txt', 'Pipfile',
+        'uwsgi.ini', 'gunicorn.conf.py',
+
+        # ===== Ruby/Rails =====
+        'Gemfile', 'config/database.yml', 'config/secrets.yml',
+
+        # ===== PHP =====
+        'config.php', 'configuration.php', 'wp-config.php',
+        'phpinfo.php', '.htaccess', 'composer.json', 'composer.lock',
+
+        # ===== .NET =====
+        'web.config', 'appsettings.json', 'appsettings.Development.json',
+        'connectionstrings.config',
+
+        # ===== 클라우드/인프라 =====
+        '.aws/credentials', '.aws/config',
+        'firebase.json', 'serviceAccountKey.json',
+        'terraform.tfstate', 'terraform.tfvars',
+
+        # ===== CI/CD =====
+        '.gitlab-ci.yml', 'Jenkinsfile', '.travis.yml',
+        '.github/workflows/main.yml',
+
+        # ===== Docker/컨테이너 =====
+        'Dockerfile', 'docker-compose.yml', 'docker-compose.override.yml',
+        '.dockerenv',
+
+        # ===== 서버 설정 =====
+        'nginx.conf', 'httpd.conf', 'server.xml',
+        'php.ini', 'my.cnf', 'redis.conf',
+
+        # ===== 인증서/키 (Critical) =====
+        'server.key', 'server.crt', 'private.pem', 'id_rsa',
+
+        # ===== 로그 =====
+        'error.log', 'access.log', 'debug.log', 'app.log',
+
+        # ===== IDE/개발 도구 =====
+        '.idea/workspace.xml', '.vscode/settings.json', '.vscode/launch.json',
     ]
 
-    # Critical severity 파일들
-    CRITICAL_FILES = ['.env', '.git/config', 'backup.sql', 'database.sql', 'db.sql', 'dump.sql']
+    # Critical severity 파일들 (노출 시 즉각 대응 필요)
+    CRITICAL_FILES = [
+        # 환경 설정
+        '.env', '.env.local', '.env.production', '.env.development',
+        # 버전 관리
+        '.git/config',
+        # 데이터베이스
+        'backup.sql', 'database.sql', 'db.sql', 'dump.sql',
+        'config/database.yml', 'config/secrets.yml',
+        # 클라우드 인증
+        '.aws/credentials', 'serviceAccountKey.json', 'terraform.tfstate',
+        # 인증서/키
+        'server.key', 'private.pem', 'id_rsa',
+        # 프레임워크 설정
+        'wp-config.php', 'local_settings.py',
+    ]
 
     def __init__(self, url: str = None, session: requests.Session = None, **kwargs):
         """
@@ -81,21 +138,59 @@ class SensitiveFileScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """민감한 파일 노출 검사 실행"""
+        # 전체 민감한 파일 검사
+        files_to_test = self.SENSITIVE_FILES
+        self.checked = len(files_to_test) if self.url else 1
+
         if not self.url:
             logger.warning("No URL provided for sensitive file scan")
+            self._add_detail(
+                id='sensitive_files_check',
+                name='민감한 파일 검사',
+                status='info',
+                severity='info',
+                description='URL이 제공되지 않았습니다.',
+                value='검사 불가',
+                expected=None,
+                recommendation=None
+            )
             return
 
         # URL 파싱하여 베이스 URL 추출
         parsed = urlparse(self.url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
 
-        # 최대 10개만 테스트 (성능 고려)
-        files_to_test = self.SENSITIVE_FILES[:10]
-
+        # 각 파일별 검사 및 detail 추가
         for file_path in files_to_test:
-            self._check_file(base_url, file_path)
+            result = self._check_file(base_url, file_path)
+            file_id = f'file_{file_path.replace("/", "_").replace(".", "_")}'
 
-    def _check_file(self, base_url: str, file_path: str) -> None:
+            if result:
+                # 노출된 파일 - fail
+                self._add_detail(
+                    id=file_id,
+                    name=file_path,
+                    status='fail',
+                    severity=result['severity'],
+                    description='민감한 파일이 노출됨',
+                    value=f'{result["size"]} bytes',
+                    expected='접근 차단',
+                    recommendation='서버에서 해당 파일 접근을 차단하세요.'
+                )
+            else:
+                # 노출되지 않은 파일 - pass
+                self._add_detail(
+                    id=file_id,
+                    name=file_path,
+                    status='pass',
+                    severity='info',
+                    description='파일 노출 없음 (404 또는 접근 차단)',
+                    value='노출 안됨',
+                    expected=None,
+                    recommendation=None
+                )
+
+    def _check_file(self, base_url: str, file_path: str) -> dict:
         """개별 파일 검사"""
         test_url = urljoin(base_url, file_path)
 
@@ -113,7 +208,7 @@ class SensitiveFileScanner(BaseScanner):
                     # 심각도 결정
                     severity = 'critical' if file_path in self.CRITICAL_FILES else 'high'
 
-                    self.issues.append({
+                    issue = {
                         'type': 'Sensitive File Exposed',
                         'severity': severity,
                         'file': file_path,
@@ -122,11 +217,15 @@ class SensitiveFileScanner(BaseScanner):
                         'description': f'민감한 파일이 노출되어 있습니다: {file_path}',
                         'evidence': self._extract_file_evidence(response.text, file_path),
                         'recommendation': '해당 파일에 대한 접근을 차단하세요.'
-                    })
+                    }
+                    self.issues.append(issue)
+                    return issue
 
-        except RequestException as e:
+        except Exception as e:
             logger.debug(f"Failed to check {test_url}: {str(e)}")
             # 네트워크 오류는 정상적일 수 있음
+
+        return None
 
     def _is_real_404(self, response: requests.Response) -> bool:
         """응답이 실제로는 404 에러 페이지인지 확인 (False Positive 감소)"""
@@ -184,8 +283,7 @@ class SensitiveFileScanner(BaseScanner):
             'has_exposed_files': len(self.issues) > 0,
             'critical_files': critical_count,
             'high_risk_files': high_count,
-            'files_tested': min(10, len(self.SENSITIVE_FILES))
-
+            'files_tested': len(self.SENSITIVE_FILES)
         }
     @classmethod
     def get_metadata(cls):

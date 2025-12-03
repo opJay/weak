@@ -134,6 +134,9 @@ class SecurityScanResultSerializer(serializers.ModelSerializer):
             'sensitive_data_exposure', 'insufficient_logging',
             'vulnerable_components', 'security_headers', 'ssl_tls_result',
             'clickjacking', 'cors_misconfiguration', 'open_redirects',
+            # 추가 기본 보안 검사
+            'http_method', 'sensitive_file', 'mixed_content',
+            'subresource_integrity', 'directory_listing',
             'scanner_metadata', 'created_at', 'updated_at'
         ]
 
@@ -225,7 +228,9 @@ class ScanSummarySerializer(serializers.ModelSerializer):
                         'icon': meta.get('icon'),
                         'status': 'pass',  # 기본값
                         'severity': 'low',  # 기본값
-                        'count': 0
+                        'count': 0,
+                        'checked': 0,  # 검사 대상 수
+                        'passed': 0    # 통과 수
                     }
 
                     # 실제 결과 필드에서 상태 확인
@@ -233,22 +238,35 @@ class ScanSummarySerializer(serializers.ModelSerializer):
                     if field_name:
                         field_value = getattr(result, field_name, {})
                         if isinstance(field_value, dict):
-                            # 취약점이 있는지 확인
-                            vulnerabilities = field_value.get('vulnerabilities', [])
-                            if vulnerabilities:
-                                scanner_item['status'] = 'fail'
-                                scanner_item['count'] = len(vulnerabilities)
-                                # 가장 높은 심각도 찾기
-                                severities = [v.get('severity', 'low') for v in vulnerabilities]
-                                severity_order = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1, 'info': 0}
-                                max_severity = max(severities, key=lambda x: severity_order.get(x, 0))
-                                scanner_item['severity'] = max_severity
+                            # checked와 passed 값 추출
+                            scanner_item['checked'] = field_value.get('checked', 0)
+                            scanner_item['passed'] = field_value.get('passed', 0)
+
+                            # 스킵 여부 먼저 확인
+                            if field_value.get('skipped'):
+                                scanner_item['status'] = 'skipped'
+                                scanner_item['reason'] = field_value.get('reason', 'Scanner disabled')
+                            # 검사 대상이 없으면 해당없음
+                            elif field_value.get('status') == 'not_applicable' or scanner_item['checked'] == 0:
+                                scanner_item['status'] = 'not_applicable'
                             else:
-                                scanner_item['status'] = 'pass'
+                                # 취약점이 있는지 확인 (vulnerabilities 또는 issues 키)
+                                vulnerabilities = field_value.get('vulnerabilities', []) or field_value.get('issues', [])
+                                if vulnerabilities:
+                                    scanner_item['status'] = 'fail'
+                                    scanner_item['count'] = len(vulnerabilities)
+                                    # 가장 높은 심각도 찾기
+                                    severities = [v.get('severity', 'low') for v in vulnerabilities]
+                                    severity_order = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1, 'info': 0}
+                                    max_severity = max(severities, key=lambda x: severity_order.get(x, 0))
+                                    scanner_item['severity'] = max_severity
+                                else:
+                                    scanner_item['status'] = 'pass'
 
                     scanner_list.append(scanner_item)
 
             # 심각도별 개수 계산
+            skipped_count = sum(1 for s in scanner_list if s['status'] == 'skipped')
             critical_count = sum(1 for s in scanner_list if s['severity'] == 'critical' and s['status'] == 'fail')
             high_count = sum(1 for s in scanner_list if s['severity'] == 'high' and s['status'] == 'fail')
             medium_count = sum(1 for s in scanner_list if s['severity'] == 'medium' and s['status'] == 'fail')
@@ -258,6 +276,7 @@ class ScanSummarySerializer(serializers.ModelSerializer):
                 'overall_score': result.overall_score,
                 'risk_level': result.risk_level,
                 'scanner_count': len(scanner_list),
+                'skipped_count': skipped_count,
                 'critical_count': critical_count,
                 'high_count': high_count,
                 'medium_count': medium_count,
@@ -290,18 +309,23 @@ class ScanSummarySerializer(serializers.ModelSerializer):
                     if field_name:
                         field_value = getattr(result, field_name, {})
                         if isinstance(field_value, dict):
-                            # 취약점/이슈가 있는지 확인
-                            vulnerabilities = field_value.get('vulnerabilities', field_value.get('issues', []))
-                            if vulnerabilities:
-                                scanner_item['status'] = 'fail'
-                                scanner_item['count'] = len(vulnerabilities)
-                                # 심각도 설정 (웹 표준은 주로 info/low)
-                                if field_name in ['html_errors', 'css_errors', 'js_errors']:
-                                    scanner_item['severity'] = 'medium'
-                                elif field_name == 'seo_issues':
-                                    scanner_item['severity'] = 'low'
+                            # 스킵 여부 먼저 확인
+                            if field_value.get('skipped'):
+                                scanner_item['status'] = 'skipped'
+                                scanner_item['reason'] = field_value.get('reason', 'Scanner disabled')
                             else:
-                                scanner_item['status'] = 'pass'
+                                # 취약점/이슈가 있는지 확인
+                                vulnerabilities = field_value.get('vulnerabilities', field_value.get('issues', []))
+                                if vulnerabilities:
+                                    scanner_item['status'] = 'fail'
+                                    scanner_item['count'] = len(vulnerabilities)
+                                    # 심각도 설정 (웹 표준은 주로 info/low)
+                                    if field_name in ['html_errors', 'css_errors', 'js_errors']:
+                                        scanner_item['severity'] = 'medium'
+                                    elif field_name == 'seo_issues':
+                                        scanner_item['severity'] = 'low'
+                                else:
+                                    scanner_item['status'] = 'pass'
 
                     scanner_list.append(scanner_item)
 
@@ -342,19 +366,24 @@ class ScanSummarySerializer(serializers.ModelSerializer):
                     if field_name:
                         field_value = getattr(result, field_name, {})
                         if isinstance(field_value, dict):
-                            # 취약점/이슈가 있는지 확인
-                            vulnerabilities = field_value.get('vulnerabilities', field_value.get('issues', []))
-                            if vulnerabilities:
-                                scanner_item['status'] = 'fail'
-                                scanner_item['count'] = len(vulnerabilities)
-                                # 심각도 설정 (접근성 이슈별로 다름)
-                                severities = [v.get('severity', 'low') for v in vulnerabilities if isinstance(v, dict)]
-                                if severities:
-                                    severity_order = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1, 'info': 0}
-                                    max_severity = max(severities, key=lambda x: severity_order.get(x, 0))
-                                    scanner_item['severity'] = max_severity
+                            # 스킵 여부 먼저 확인
+                            if field_value.get('skipped'):
+                                scanner_item['status'] = 'skipped'
+                                scanner_item['reason'] = field_value.get('reason', 'Scanner disabled')
                             else:
-                                scanner_item['status'] = 'pass'
+                                # 취약점/이슈가 있는지 확인
+                                vulnerabilities = field_value.get('vulnerabilities', field_value.get('issues', []))
+                                if vulnerabilities:
+                                    scanner_item['status'] = 'fail'
+                                    scanner_item['count'] = len(vulnerabilities)
+                                    # 심각도 설정 (접근성 이슈별로 다름)
+                                    severities = [v.get('severity', 'low') for v in vulnerabilities if isinstance(v, dict)]
+                                    if severities:
+                                        severity_order = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1, 'info': 0}
+                                        max_severity = max(severities, key=lambda x: severity_order.get(x, 0))
+                                        scanner_item['severity'] = max_severity
+                                else:
+                                    scanner_item['status'] = 'pass'
 
                     scanner_list.append(scanner_item)
 
@@ -382,6 +411,7 @@ class ScannerDetailSerializer(serializers.Serializer):
     overall_score = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
     vulnerabilities = serializers.SerializerMethodField()
+    details = serializers.SerializerMethodField()  # 세부 검사 항목
     metadata = serializers.SerializerMethodField()
     guide = serializers.SerializerMethodField()
     statistics = serializers.SerializerMethodField()
@@ -414,7 +444,7 @@ class ScannerDetailSerializer(serializers.Serializer):
         field_name = self.context.get('field_name')
         field_value = getattr(obj, field_name, {})
         if isinstance(field_value, dict):
-            vulnerabilities = field_value.get('vulnerabilities', [])
+            vulnerabilities = field_value.get('vulnerabilities', []) or field_value.get('issues', [])
             return 'fail' if vulnerabilities else 'pass'
         return 'unknown'
 
@@ -423,7 +453,7 @@ class ScannerDetailSerializer(serializers.Serializer):
         field_name = self.context.get('field_name')
         field_value = getattr(obj, field_name, {})
         if isinstance(field_value, dict):
-            vulnerabilities = field_value.get('vulnerabilities', [])
+            vulnerabilities = field_value.get('vulnerabilities', []) or field_value.get('issues', [])
             if vulnerabilities:
                 severities = [v.get('severity', 'low') for v in vulnerabilities]
                 severity_order = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1, 'info': 0}
@@ -452,7 +482,15 @@ class ScannerDetailSerializer(serializers.Serializer):
         field_name = self.context.get('field_name')
         field_value = getattr(obj, field_name, {})
         if isinstance(field_value, dict):
-            return field_value.get('vulnerabilities', [])
+            return field_value.get('vulnerabilities', []) or field_value.get('issues', [])
+        return []
+
+    def get_details(self, obj):
+        """세부 검사 항목 목록 (각 항목별 pass/fail/warning 상태)"""
+        field_name = self.context.get('field_name')
+        field_value = getattr(obj, field_name, {})
+        if isinstance(field_value, dict):
+            return field_value.get('details', [])
         return []
 
     def get_metadata(self, obj):
@@ -492,7 +530,7 @@ class ScannerDetailSerializer(serializers.Serializer):
         field_value = getattr(obj, field_name, {})
 
         if isinstance(field_value, dict):
-            vulnerabilities = field_value.get('vulnerabilities', [])
+            vulnerabilities = field_value.get('vulnerabilities', []) or field_value.get('issues', [])
 
             # 심각도별 개수 계산
             severity_counts = {}

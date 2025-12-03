@@ -55,8 +55,20 @@ class PathTraversalScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """Path Traversal 취약점 검사 실행"""
+        # 검사 항목: URL 파라미터, URL 경로
+        self.checked = 2
+
         if not self.url:
-            logger.warning("No URL provided for path traversal scan")
+            self._add_detail(
+                id='path_traversal_check',
+                name='경로 순회 취약점 검사',
+                status='pass',
+                severity='info',
+                description='검사할 URL 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         parsed = urlparse(self.url)
@@ -98,6 +110,31 @@ class PathTraversalScanner(BaseScanner):
                     'description': 'URL 경로가 파일 접근에 사용될 수 있어 경로 순회에 취약할 수 있습니다.',
                     'recommendation': 'URL 기반 파일 접근 시 경로 검증을 철저히 하세요.'
                 })
+
+        # 결과 요약
+        if self.issues:
+            critical_count = len([i for i in self.issues if i.get('severity') == 'critical'])
+            self._add_detail(
+                id='path_traversal_check',
+                name='경로 순회 취약점 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.issues)}개의 경로 순회 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='경로 순회 취약점 없음',
+                recommendation='파일 경로를 화이트리스트로 제한하고, 상대 경로를 제거하세요.'
+            )
+        else:
+            self._add_detail(
+                id='path_traversal_check',
+                name='경로 순회 취약점 검사',
+                status='pass',
+                severity='info',
+                description='경로 순회 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _get_additional_fields(self) -> Dict[str, Any]:
         """추가 필드 반환"""

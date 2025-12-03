@@ -24,7 +24,7 @@ class XSSScanner(BaseScanner):
         'icon': '💉',
         'description': 'Cross-Site Scripting 취약점 검사',
         'weight': 1,
-        'field': 'has_xss',
+        'field': 'xss_vulnerabilities',
         'category': 'security_basic',
         'severity': 'high'
     }
@@ -40,6 +40,8 @@ class XSSScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """XSS 취약점 스캔 실행"""
+        # 검사 항목: CSP, Reflected XSS, Event Handler XSS, DOM XSS
+        self.checked = 4
 
         # session이 있고 URL이 있으면 GET 요청
         if hasattr(self, 'session') and self.session and self.url and not self.html_content:
@@ -69,60 +71,141 @@ class XSSScanner(BaseScanner):
             except:
                 pass
 
-        # CSP (Content Security Policy) 검사
-        if self.response and hasattr(self.response, 'headers'):
-            csp_header = self.response.headers.get('Content-Security-Policy', '')
-            if csp_header:
-                # unsafe-inline은 XSS 취약점을 허용할 수 있음
-                if 'unsafe-inline' in csp_header:
-                    self.issues.append({
-                        'type': 'CSP Bypass Risk',
-                        'severity': 'medium',
-                        'description': "CSP contains 'unsafe-inline' which can allow XSS attacks",
-                        'header_value': csp_header
-                    })
-                # unsafe-eval은 코드 실행을 허용할 수 있음
-                if 'unsafe-eval' in csp_header:
-                    self.issues.append({
-                        'type': 'CSP Bypass Risk',
-                        'severity': 'medium',
-                        'description': "CSP contains 'unsafe-eval' which can allow code execution",
-                        'header_value': csp_header
-                    })
+        # 1. CSP (Content Security Policy) 검사
+        self._check_csp()
 
-        if self.html_content:
-            # Reflected XSS 패턴 체크 - URL 파라미터 분석을 먼저 수행
-            if self.url and '?' in self.url:
-                parsed = urlparse(self.url)
-                params = parse_qs(parsed.query)
+        # 2. Reflected XSS 검사
+        self._check_reflected_xss()
 
-                # XSS 페이로드를 포함하는 파라미터 찾기
-                for param_name, values in params.items():
-                    for value in values:
-                        if any(indicator in value for indicator in ['<script>', 'alert(', 'onerror=']):
-                            # 해당 값이 HTML에 그대로 반영되는지 확인
-                            if value in self.html_content:
-                                self.vulnerabilities.append({
-                                    'type': 'Reflected XSS',
-                                    'severity': 'high',
-                                    'description': f'XSS vulnerability in parameter: {param_name}',
-                                    'parameter': param_name
-                                })
-                                break
+        # 3. Event Handler XSS 검사
+        self._check_event_handler_xss()
 
-            # Reflected XSS 일반 패턴
-            xss_indicators = [
-                '<script>',
-                '</script>',
-                'alert(',
-                'javascript:',
-                'onerror=',
-                'onclick=',
-                'onload='
-            ]
+        # 4. DOM XSS 검사
+        self._check_dom_xss()
 
+    def _check_csp(self) -> None:
+        """CSP 헤더 검사"""
+        if not self.response or not hasattr(self.response, 'headers'):
+            self._add_detail(
+                id='csp',
+                name='Content Security Policy',
+                status='warning',
+                severity='medium',
+                description='응답 헤더를 확인할 수 없음',
+                value=None,
+                expected='CSP 헤더 설정',
+                recommendation='CSP 헤더를 설정하여 XSS를 방어하세요.'
+            )
+            return
+
+        headers = self.response.headers if hasattr(self.response.headers, 'get') else {}
+        csp_header = headers.get('Content-Security-Policy', '')
+
+        if not csp_header:
+            self._add_detail(
+                id='csp',
+                name='Content Security Policy',
+                status='fail',
+                severity='medium',
+                description='CSP 헤더가 설정되지 않음',
+                value=None,
+                expected="default-src 'self'",
+                recommendation='Content-Security-Policy 헤더를 설정하세요.'
+            )
+            self.issues.append({
+                'type': 'Missing CSP Header',
+                'severity': 'medium',
+                'description': 'Content Security Policy header is missing'
+            })
+        elif 'unsafe-inline' in csp_header or 'unsafe-eval' in csp_header:
+            issues = []
+            if 'unsafe-inline' in csp_header:
+                issues.append('unsafe-inline')
+            if 'unsafe-eval' in csp_header:
+                issues.append('unsafe-eval')
+
+            self._add_detail(
+                id='csp',
+                name='Content Security Policy',
+                status='warning',
+                severity='medium',
+                description=f"CSP에 위험한 디렉티브 포함: {', '.join(issues)}",
+                value=csp_header[:100] + ('...' if len(csp_header) > 100 else ''),
+                expected="unsafe-inline, unsafe-eval 제거",
+                recommendation='unsafe-inline과 unsafe-eval을 제거하세요.'
+            )
+            if 'unsafe-inline' in csp_header:
+                self.issues.append({
+                    'type': 'CSP Bypass Risk',
+                    'severity': 'medium',
+                    'description': "CSP contains 'unsafe-inline' which can allow XSS attacks",
+                    'header_value': csp_header
+                })
+            if 'unsafe-eval' in csp_header:
+                self.issues.append({
+                    'type': 'CSP Bypass Risk',
+                    'severity': 'medium',
+                    'description': "CSP contains 'unsafe-eval' which can allow code execution",
+                    'header_value': csp_header
+                })
+        else:
+            self._add_detail(
+                id='csp',
+                name='Content Security Policy',
+                status='pass',
+                severity='info',
+                description='CSP 헤더가 안전하게 설정됨',
+                value=csp_header[:100] + ('...' if len(csp_header) > 100 else ''),
+                expected=None,
+                recommendation=None
+            )
+
+    def _check_reflected_xss(self) -> None:
+        """Reflected XSS 검사"""
+        if not self.html_content:
+            self._add_detail(
+                id='reflected_xss',
+                name='Reflected XSS',
+                status='pass',
+                severity='info',
+                description='검사할 HTML 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+            return
+
+        xss_found = False
+        xss_detail = None
+
+        # URL 파라미터 분석
+        if self.url and '?' in self.url:
+            parsed = urlparse(self.url)
+            params = parse_qs(parsed.query)
+
+            for param_name, values in params.items():
+                for value in values:
+                    if any(indicator in value for indicator in ['<script>', 'alert(', 'onerror=']):
+                        if value in self.html_content:
+                            xss_found = True
+                            xss_detail = f'파라미터 {param_name}에서 XSS 취약점 발견'
+                            self.vulnerabilities.append({
+                                'type': 'Reflected XSS',
+                                'severity': 'high',
+                                'description': f'XSS vulnerability in parameter: {param_name}',
+                                'parameter': param_name
+                            })
+                            break
+                if xss_found:
+                    break
+
+        # XSS 패턴 검사
+        if not xss_found:
+            xss_indicators = ['<script>', '</script>', 'alert(', 'javascript:', 'onerror=', 'onclick=', 'onload=']
             for indicator in xss_indicators:
-                if indicator in self.html_content and not any(v.get('type') == 'Reflected XSS' for v in self.vulnerabilities):
+                if indicator in self.html_content:
+                    xss_found = True
+                    xss_detail = f'XSS 패턴 감지: {indicator}'
                     self.vulnerabilities.append({
                         'type': 'Reflected XSS',
                         'severity': 'high',
@@ -130,92 +213,167 @@ class XSSScanner(BaseScanner):
                     })
                     break
 
-            # Event handlers 체크 (onclick, onerror 등)
-            event_patterns = [
-                r'onerror\s*=',
-                r'onclick\s*=',
-                r'onload\s*=',
-                r'onmouseover\s*=',
-                r'onfocus\s*=',
-                r'onblur\s*='
-            ]
-
-            for pattern_str in event_patterns:
-                if re.search(pattern_str, self.html_content, re.IGNORECASE):
-                    handler_match = re.search(r'(on\w+)\s*=', self.html_content, re.IGNORECASE)
-                    if handler_match:
-                        self.vulnerabilities.append({
-                            'type': 'Event Handler XSS',
-                            'severity': 'medium',
-                            'description': f'Event handler {handler_match.group(1)} detected',
-                            'pattern': f'event handler {handler_match.group(1)}'
-                        })
-                        break
-
-            # XSS Payloads 직접 체크 (테스트용) - 기존 XSS가 없을 때만
-            if not any(v.get('type') == 'Reflected XSS' for v in self.vulnerabilities):
-                for payload in self.XSS_PAYLOADS:
-                    if payload in self.html_content:
-                        self.vulnerabilities.append({
-                            'type': 'Reflected XSS',
-                            'severity': 'high',
-                            'description': f'XSS payload detected: {payload}'
-                        })
-                        break
-
-            # DOM XSS 패턴 체크
-            dom_sinks = {
-                'innerHTML': 'innerHTML',
-                'outerHTML': 'outerHTML',
-                'document.write': 'document.write',
-                'document.writeln': 'document.writeln',
-                'eval(': 'eval',
-                'setTimeout(': 'setTimeout',
-                'setInterval(': 'setInterval',
-                'Function(': 'Function'
-            }
-
-            dom_sources = ['location.hash', 'location.search', 'location.href', 'document.URL', 'document.referrer']
-
-            # DOM XSS 체크
-            for sink_pattern, sink_name in dom_sinks.items():
-                if sink_pattern in self.html_content:
-                    # Source도 있는지 체크
-                    source_found = None
-                    for source in dom_sources:
-                        if source in self.html_content:
-                            source_found = source
-                            break
-
+        # XSS Payloads 직접 체크
+        if not xss_found:
+            for payload in self.XSS_PAYLOADS:
+                if payload in self.html_content:
+                    xss_found = True
+                    xss_detail = f'XSS 페이로드 감지: {payload[:30]}...'
                     self.vulnerabilities.append({
-                        'type': 'DOM-based XSS',
+                        'type': 'Reflected XSS',
                         'severity': 'high',
-                        'description': f'DOM XSS via {sink_name}',
-                        'sink': sink_name,
-                        'source': source_found or 'userInput'
+                        'description': f'XSS payload detected: {payload}'
                     })
                     break
 
-        # CSP 헤더 체크
-        if self.response and hasattr(self.response, 'headers'):
-            headers = self.response.headers if hasattr(self.response.headers, 'get') else {}
+        if xss_found:
+            self._add_detail(
+                id='reflected_xss',
+                name='Reflected XSS',
+                status='fail',
+                severity='high',
+                description=xss_detail,
+                value='취약점 발견',
+                expected='입력값 이스케이프 필요',
+                recommendation='사용자 입력을 HTML 엔티티로 이스케이프하세요.'
+            )
+        else:
+            self._add_detail(
+                id='reflected_xss',
+                name='Reflected XSS',
+                status='pass',
+                severity='info',
+                description='Reflected XSS 패턴이 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
-            if not headers.get('Content-Security-Policy'):
-                self.issues.append({
-                    'type': 'Missing CSP Header',
-                    'severity': 'medium',
-                    'description': 'Content Security Policy header is missing'
-                })
+    def _check_event_handler_xss(self) -> None:
+        """Event Handler XSS 검사"""
+        if not self.html_content:
+            self._add_detail(
+                id='event_handler_xss',
+                name='Event Handler XSS',
+                status='pass',
+                severity='info',
+                description='검사할 HTML 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+            return
 
-            # Weak CSP (unsafe-inline)
-            csp = headers.get('Content-Security-Policy', '')
-            if 'unsafe-inline' in csp:
-                self.issues.append({
-                    'type': 'Weak CSP',
-                    'severity': 'medium',
-                    'description': 'CSP allows unsafe-inline',
-                    'details': 'unsafe-inline directive found'
+        event_patterns = [
+            r'onerror\s*=', r'onclick\s*=', r'onload\s*=',
+            r'onmouseover\s*=', r'onfocus\s*=', r'onblur\s*='
+        ]
+
+        handler_found = None
+        for pattern_str in event_patterns:
+            if re.search(pattern_str, self.html_content, re.IGNORECASE):
+                handler_match = re.search(r'(on\w+)\s*=', self.html_content, re.IGNORECASE)
+                if handler_match:
+                    handler_found = handler_match.group(1)
+                    self.vulnerabilities.append({
+                        'type': 'Event Handler XSS',
+                        'severity': 'medium',
+                        'description': f'Event handler {handler_found} detected',
+                        'pattern': f'event handler {handler_found}'
+                    })
+                    break
+
+        if handler_found:
+            self._add_detail(
+                id='event_handler_xss',
+                name='Event Handler XSS',
+                status='warning',
+                severity='medium',
+                description=f'이벤트 핸들러 감지: {handler_found}',
+                value=handler_found,
+                expected='이벤트 핸들러 제거 또는 안전하게 처리',
+                recommendation='인라인 이벤트 핸들러 대신 addEventListener를 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='event_handler_xss',
+                name='Event Handler XSS',
+                status='pass',
+                severity='info',
+                description='위험한 이벤트 핸들러가 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+
+    def _check_dom_xss(self) -> None:
+        """DOM XSS 검사"""
+        if not self.html_content:
+            self._add_detail(
+                id='dom_xss',
+                name='DOM-based XSS',
+                status='pass',
+                severity='info',
+                description='검사할 HTML 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+            return
+
+        dom_sinks = {
+            'innerHTML': 'innerHTML',
+            'outerHTML': 'outerHTML',
+            'document.write': 'document.write',
+            'document.writeln': 'document.writeln',
+            'eval(': 'eval',
+            'setTimeout(': 'setTimeout',
+            'setInterval(': 'setInterval',
+            'Function(': 'Function'
+        }
+        dom_sources = ['location.hash', 'location.search', 'location.href', 'document.URL', 'document.referrer']
+
+        sink_found = None
+        source_found = None
+
+        for sink_pattern, sink_name in dom_sinks.items():
+            if sink_pattern in self.html_content:
+                sink_found = sink_name
+                for source in dom_sources:
+                    if source in self.html_content:
+                        source_found = source
+                        break
+                self.vulnerabilities.append({
+                    'type': 'DOM-based XSS',
+                    'severity': 'high',
+                    'description': f'DOM XSS via {sink_name}',
+                    'sink': sink_name,
+                    'source': source_found or 'userInput'
                 })
+                break
+
+        if sink_found:
+            self._add_detail(
+                id='dom_xss',
+                name='DOM-based XSS',
+                status='fail',
+                severity='high',
+                description=f'DOM XSS 취약점: {sink_found}' + (f' (소스: {source_found})' if source_found else ''),
+                value=f'Sink: {sink_found}',
+                expected='안전한 DOM 조작 사용',
+                recommendation='innerHTML 대신 textContent를 사용하고, eval 사용을 피하세요.'
+            )
+        else:
+            self._add_detail(
+                id='dom_xss',
+                name='DOM-based XSS',
+                status='pass',
+                severity='info',
+                description='DOM XSS 패턴이 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _test_xss_payloads(self, url):
         """XSS payload 테스트"""

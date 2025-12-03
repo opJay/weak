@@ -51,6 +51,9 @@ class JWTAdvancedScanner(BaseScanner):
 
     def _execute_scan(self):
         """스캔 실행"""
+        # 검사 항목: JWT 토큰 분석, JWK 노출, JWKS 엔드포인트
+        self.checked = 3
+
         # JWT 토큰 수집
         tokens = self._collect_jwt_tokens()
 
@@ -64,6 +67,42 @@ class JWTAdvancedScanner(BaseScanner):
 
         # /.well-known/jwks.json 확인
         self._check_jwks_endpoint()
+
+        # 결과 요약
+        if not tokens and not self.vulnerabilities:
+            self._add_detail(
+                id='jwt_advanced_check',
+                name='JWT 고급 보안 검사',
+                status='pass',
+                severity='info',
+                description='JWT 토큰이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+        elif self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='jwt_advanced_check',
+                name='JWT 고급 보안 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 JWT 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='JWT 취약점 없음',
+                recommendation='강력한 알고리즘, 랜덤 시크릿, exp claim을 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='jwt_advanced_check',
+                name='JWT 고급 보안 검사',
+                status='pass',
+                severity='info',
+                description='JWT 고급 보안 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _collect_jwt_tokens(self):
         """JWT 토큰 수집"""

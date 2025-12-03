@@ -35,6 +35,9 @@ class APIIntegrityScanner(BaseScanner):
 
     def _execute_scan(self):
         """스캔 실행"""
+        # 검사 항목: 응답 서명, ETag, Content-MD5, API SRI, API 버전
+        self.checked = 5
+
         # 1. 응답 서명 헤더 검사
         self._check_response_signature()
 
@@ -49,6 +52,31 @@ class APIIntegrityScanner(BaseScanner):
 
         # 5. API 버전 관리 검사
         self._check_api_versioning()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            medium_count = len([v for v in self.vulnerabilities if v.get('severity') == 'medium'])
+            self._add_detail(
+                id='api_integrity_check',
+                name='API 응답 무결성 검사',
+                status='fail',
+                severity='medium' if medium_count > 0 else 'low',
+                description=f'{len(self.vulnerabilities)}개의 API 무결성 취약점 발견',
+                value=f'Medium: {medium_count}개',
+                expected='API 무결성 취약점 없음',
+                recommendation='응답 서명, ETag, SHA-256 다이제스트를 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='api_integrity_check',
+                name='API 응답 무결성 검사',
+                status='pass',
+                severity='info',
+                description='API 응답 무결성 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_response_signature(self):
         """응답 서명 헤더 검사"""

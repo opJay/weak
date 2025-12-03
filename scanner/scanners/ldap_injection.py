@@ -51,10 +51,38 @@ class LDAPInjectionScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """LDAP Injection 스캔 실행"""
+        # 검사 항목: LDAP 파라미터, 필터, 인증, 에러 메시지
+        self.checked = 4
+
         self._check_ldap_params()
         self._check_ldap_filters()
         self._check_ldap_authentication()
         self._check_error_messages()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') in ['critical', 'high']])
+            self._add_detail(
+                id='ldap_injection_check',
+                name='LDAP Injection 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 LDAP Injection 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='LDAP Injection 취약점 없음',
+                recommendation='LDAP 쿼리 전에 입력값을 이스케이프 처리하세요.'
+            )
+        else:
+            self._add_detail(
+                id='ldap_injection_check',
+                name='LDAP Injection 검사',
+                status='pass',
+                severity='info',
+                description='LDAP Injection 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_ldap_params(self) -> None:
         """LDAP 관련 파라미터 검사"""

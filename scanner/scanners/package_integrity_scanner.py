@@ -58,6 +58,9 @@ class PackageIntegrityScanner(BaseScanner):
 
     def _execute_scan(self):
         """스캔 실행"""
+        # 검사 항목: Lockfile 무결성, SRI 강도, 체크섬
+        self.checked = 3
+
         # 1. Lockfile 무결성 검사
         self._check_lockfile_integrity()
 
@@ -66,6 +69,31 @@ class PackageIntegrityScanner(BaseScanner):
 
         # 3. 패키지 체크섬 검증
         self._check_package_checksums()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') == 'high'])
+            self._add_detail(
+                id='package_integrity_check',
+                name='패키지 무결성 검증',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 패키지 무결성 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='패키지 무결성 취약점 없음',
+                recommendation='SHA-256 이상의 강력한 해시 알고리즘을 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='package_integrity_check',
+                name='패키지 무결성 검증',
+                status='pass',
+                severity='info',
+                description='패키지 무결성 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_lockfile_integrity(self):
         """Lockfile 무결성 검사"""

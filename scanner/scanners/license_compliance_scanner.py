@@ -56,6 +56,9 @@ class LicenseComplianceScanner(BaseScanner):
 
     def _execute_scan(self):
         """스캔 실행"""
+        # 검사 항목: 라이선스 파일, 종속성 라이선스, 호환성
+        self.checked = 3
+
         # 1. 라이선스 파일 검사
         self._check_license_files()
 
@@ -64,6 +67,31 @@ class LicenseComplianceScanner(BaseScanner):
 
         # 3. 라이선스 호환성 검사
         self._check_license_compatibility()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') == 'high'])
+            self._add_detail(
+                id='license_compliance_check',
+                name='라이선스 준수 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 라이선스 준수 문제 발견',
+                value=f'High: {high_count}개',
+                expected='라이선스 준수 문제 없음',
+                recommendation='Copyleft 및 상업적 제한 라이선스를 점검하세요.'
+            )
+        else:
+            self._add_detail(
+                id='license_compliance_check',
+                name='라이선스 준수 검사',
+                status='pass',
+                severity='info',
+                description='라이선스 준수 문제가 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_license_files(self):
         """라이선스 파일 검사"""

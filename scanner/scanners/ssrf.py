@@ -65,15 +65,40 @@ class SSRFScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """SSRF 취약점 검사 실행"""
+        # 검사 항목: URL 파라미터, 폼 입력, URL 입력 필드
+        self.checked = 3
+
         if self.url:
-            # URL 파라미터에서 SSRF 가능성 검사
             self._scan_url_parameters()
 
         if self.html_content:
-            # 폼 입력에서 SSRF 가능성 검사
             self._scan_forms()
-            # HTML 콘텐츠에서 URL 입력 필드 검사
             self._scan_url_inputs()
+
+        # 결과 요약
+        if self.issues:
+            critical_count = len([i for i in self.issues if i.get('severity') == 'critical'])
+            self._add_detail(
+                id='ssrf_check',
+                name='SSRF 취약점 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.issues)}개의 SSRF 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='SSRF 취약점 없음',
+                recommendation='사용자 입력 URL을 화이트리스트로 제한하고 내부 IP를 차단하세요.'
+            )
+        else:
+            self._add_detail(
+                id='ssrf_check',
+                name='SSRF 취약점 검사',
+                status='pass',
+                severity='info',
+                description='SSRF 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _scan_url_parameters(self) -> None:
         """URL 파라미터에서 SSRF 취약점 검사"""

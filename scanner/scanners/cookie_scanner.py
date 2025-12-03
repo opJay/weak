@@ -163,69 +163,116 @@ class CookieScanner(BaseScanner):
     # ========== 스캔 실행 ==========
     def _execute_scan(self) -> None:
         """쿠키 보안 검사 실행"""
+        self.checked = 1  # 최소 1개 검사 (쿠키 존재 여부)
+
         if not self.cookies:
+            self._add_detail(
+                id='cookie_check',
+                name='쿠키 존재 여부',
+                status='info',
+                severity='info',
+                description='응답에 Set-Cookie 헤더가 없습니다.',
+                value='쿠키 없음',
+                expected=None,
+                recommendation='쿠키를 사용하지 않는 경우 해당 없음'
+            )
             return
 
-        for cookie in self.cookies:
-            cookie_issues = []
-            severity = 'low'  # 기본 심각도
+        # 쿠키가 있는 경우 - 쿠키 존재 detail 추가
+        self._add_detail(
+            id='cookie_check',
+            name='쿠키 존재 여부',
+            status='pass',
+            severity='info',
+            description=f'{len(self.cookies)}개의 쿠키가 발견되었습니다.',
+            value=f'{len(self.cookies)}개',
+            expected=None,
+            recommendation=None
+        )
 
-            # Secure 플래그 검사
-            if not cookie.secure:
-                cookie_issues.append('Secure 플래그가 없습니다')
-                # HTTPS에서 Secure 없으면 높은 위험
+        self.checked = len(self.cookies) + 1  # 쿠키 존재 여부 + 각 쿠키 검사
+
+        for cookie in self.cookies:
+            cookie_id = f'cookie_{cookie.name}'
+            issues_found = []
+            severity = 'info'
+
+            # 1. Secure 플래그 검사
+            has_secure = cookie.secure
+            if not has_secure:
+                issues_found.append('Secure 없음')
                 if self.url and self.url.startswith('https://'):
                     severity = 'medium'
 
-            # HttpOnly 플래그 검사
-            # 쿠키 객체 속성 확인 방법이 다를 수 있음
+            # 2. HttpOnly 플래그 검사
             http_only = getattr(cookie, 'httponly', None)
-            if http_only is None:
-                # 대체 방법: _rest 속성에서 확인
-                http_only = cookie._rest.get('HttpOnly') if hasattr(cookie, '_rest') else False
+            if http_only is None and hasattr(cookie, '_rest'):
+                http_only = cookie._rest.get('HttpOnly')
+            has_httponly = bool(http_only)
 
-            if not http_only:
-                cookie_issues.append('HttpOnly 플래그가 없습니다')
-                # 세션 쿠키인 경우 더 위험
+            if not has_httponly:
+                issues_found.append('HttpOnly 없음')
                 if 'session' in cookie.name.lower():
                     severity = 'high'
 
-            # SameSite 속성 검사
+            # 3. SameSite 속성 검사
             same_site = getattr(cookie, 'samesite', None)
             if same_site is None and hasattr(cookie, '_rest'):
                 same_site = cookie._rest.get('SameSite')
 
             if not same_site:
-                cookie_issues.append('SameSite 속성이 없습니다')
+                issues_found.append('SameSite 없음')
             elif same_site.lower() == 'none':
-                cookie_issues.append('SameSite=None은 보안상 위험할 수 있습니다')
-                severity = 'medium'
+                issues_found.append('SameSite=None')
+                severity = 'medium' if severity == 'info' else severity
 
-            # 쿠키 만료 시간 검사 (세션 쿠키 vs 영구 쿠키)
-            if cookie.expires:
-                # 너무 긴 만료 시간 체크 (1년 이상)
-                if cookie.expires > time.time() + (365 * 24 * 60 * 60):
-                    cookie_issues.append('만료 기간이 너무 깁니다 (1년 이상)')
+            # 4. 만료 시간 검사
+            long_expiry = False
+            if cookie.expires and cookie.expires > time.time() + (365 * 24 * 60 * 60):
+                issues_found.append('만료 1년 초과')
+                long_expiry = True
 
-            # 민감한 정보 쿠키 이름 체크
+            # 5. 민감한 이름 검사
             sensitive_names = ['password', 'pwd', 'token', 'api', 'secret', 'key']
+            sensitive_name_found = None
             for sensitive in sensitive_names:
                 if sensitive in cookie.name.lower():
-                    cookie_issues.append(f'쿠키 이름에 민감한 정보 포함: {sensitive}')
+                    sensitive_name_found = sensitive
+                    issues_found.append(f'민감한 이름: {sensitive}')
                     severity = 'high'
                     break
 
-            if cookie_issues:
+            # 결과 추가
+            if issues_found:
+                self._add_detail(
+                    id=cookie_id,
+                    name=cookie.name,
+                    status='fail' if severity in ['high', 'critical'] else 'warning',
+                    severity=severity,
+                    description=', '.join(issues_found),
+                    value=f'Secure={has_secure}, HttpOnly={has_httponly}, SameSite={same_site or "없음"}',
+                    expected='Secure=True, HttpOnly=True, SameSite=Strict/Lax',
+                    recommendation='Secure, HttpOnly, SameSite 속성을 설정하세요.'
+                )
                 self.issues.append({
                     'type': 'Insecure Cookie',
                     'severity': severity,
                     'cookie_name': cookie.name,
-                    'domain': cookie.domain,
-                    'path': cookie.path,
-                    'issues': cookie_issues,
+                    'issues': issues_found,
                     'description': f'쿠키 "{cookie.name}"의 보안 설정이 부족합니다.',
-                    'recommendation': 'Secure, HttpOnly, SameSite 속성을 설정하고, 적절한 만료 시간을 지정하세요.'
+                    'recommendation': 'Secure, HttpOnly, SameSite 속성을 설정하세요.'
                 })
+            else:
+                self._add_detail(
+                    id=cookie_id,
+                    name=cookie.name,
+                    status='pass',
+                    severity='info',
+                    description='모든 보안 속성이 올바르게 설정됨',
+                    value=f'Secure={has_secure}, HttpOnly={has_httponly}, SameSite={same_site}',
+                    expected=None,
+                    recommendation=None
+                )
 
     # ========== 헬퍼 메서드 ==========
     def _get_additional_fields(self) -> Dict[str, Any]:

@@ -48,6 +48,8 @@ class SSLTLSDeepScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """SSL/TLS 심층 스캔 실행"""
+        # 검사 항목: HTTPS 사용, TLS 버전, 인증서
+        self.checked = 3
 
         # HTTP 요청 수행 (html_content가 없는 경우)
         if not self.html_content and self.url:
@@ -71,6 +73,16 @@ class SSLTLSDeepScanner(BaseScanner):
                     'description': 'HTTPS를 사용하지 않습니다.',
                     'recommendation': 'HTTPS를 활성화하고 HTTP를 HTTPS로 리다이렉트하세요.'
                 })
+                self._add_detail(
+                    id='ssl_tls_check',
+                    name='SSL/TLS 심층 검사',
+                    status='fail',
+                    severity='critical',
+                    description='HTTPS를 사용하지 않음',
+                    value='HTTP',
+                    expected='HTTPS',
+                    recommendation='HTTPS를 활성화하고 HTTP를 HTTPS로 리다이렉트하세요.'
+                )
                 return
 
             hostname = parsed.hostname
@@ -91,6 +103,31 @@ class SSLTLSDeepScanner(BaseScanner):
                 'severity': 'info',
                 'description': 'SSL/TLS configuration checked'
             })
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='ssl_tls_check',
+                name='SSL/TLS 심층 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 SSL/TLS 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='SSL/TLS 취약점 없음',
+                recommendation='TLS 1.2 이상만 사용하고 강력한 cipher suite를 설정하세요.'
+            )
+        else:
+            self._add_detail(
+                id='ssl_tls_check',
+                name='SSL/TLS 심층 검사',
+                status='pass',
+                severity='info',
+                description='SSL/TLS 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
     def _check_ssl_version(self, hostname: str, port: int) -> None:
         """SSL/TLS 버전 및 Cipher Suite 검사"""
         try:

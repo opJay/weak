@@ -65,12 +65,40 @@ class CommandInjectionScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """Command Injection 취약점 검사 실행"""
+        # 검사 항목: URL 파라미터, 코드 패턴, 폼 입력
+        self.checked = 3
+
         if self.url:
             self._scan_url_parameters()
 
         if self.html_content:
             self._scan_code_patterns()
             self._scan_forms()
+
+        # 결과 요약
+        if self.issues:
+            critical_count = len([i for i in self.issues if i.get('severity') == 'critical'])
+            self._add_detail(
+                id='command_injection_check',
+                name='명령어 주입 취약점 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.issues)}개의 명령어 주입 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='명령어 주입 취약점 없음',
+                recommendation='사용자 입력을 명령어에 직접 사용하지 말고, 화이트리스트와 이스케이핑을 적용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='command_injection_check',
+                name='명령어 주입 취약점 검사',
+                status='pass',
+                severity='info',
+                description='명령어 주입 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _scan_url_parameters(self) -> None:
         """URL 파라미터에서 명령어 주입 가능성 검사"""

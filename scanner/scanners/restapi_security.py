@@ -60,8 +60,22 @@ class RESTAPISecurityScanner(BaseScanner):
         """REST API 보안 스캔 실행"""
         # API 엔드포인트 탐지
         if not self._detect_api():
+            self.checked = 0
             self.vulnerabilities = []
+            self._add_detail(
+                id='rest_api_check',
+                name='REST API 보안 검사',
+                status='pass',
+                severity='info',
+                description='REST API 사용이 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
+
+        # 검사 항목: Rate Limiting, 데이터 노출, Mass Assignment, 버전 관리, 민감 엔드포인트
+        self.checked = 5
 
         # 각 보안 검사 수행
         self._check_rate_limiting()
@@ -69,6 +83,31 @@ class RESTAPISecurityScanner(BaseScanner):
         self._check_mass_assignment()
         self._check_api_versioning()
         self._check_sensitive_endpoints()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='rest_api_check',
+                name='REST API 보안 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 REST API 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='REST API 취약점 없음',
+                recommendation='Rate Limiting, 인증, 입력 검증을 구현하세요.'
+            )
+        else:
+            self._add_detail(
+                id='rest_api_check',
+                name='REST API 보안 검사',
+                status='pass',
+                severity='info',
+                description='REST API 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _detect_api(self) -> bool:
         """API 사용 여부 탐지"""

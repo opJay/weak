@@ -64,12 +64,40 @@ class WorkflowBypassScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """실제 스캔 로직 실행"""
+        # 검사 항목: 워크플로우 파라미터, 숨겨진 상태 필드
+        self.checked = 2
+
         # 1. 워크플로우 파라미터 탐지
         self._check_workflow_parameters()
 
         # 2. 숨겨진 상태 필드 탐지
         if self.html_content:
             self._check_hidden_state_fields()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') == 'high'])
+            self._add_detail(
+                id='workflow_bypass_check',
+                name='워크플로우 우회 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 워크플로우 우회 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='워크플로우 우회 취약점 없음',
+                recommendation='워크플로우 상태는 서버 세션에서 관리하세요.'
+            )
+        else:
+            self._add_detail(
+                id='workflow_bypass_check',
+                name='워크플로우 우회 검사',
+                status='pass',
+                severity='info',
+                description='워크플로우 우회 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _build_result(self) -> Dict[str, Any]:
         """결과 구성"""

@@ -106,14 +106,22 @@
     color: white;
 }
 
+.test-badge.skipped {
+    background: #9e9e9e;
+    color: white;
+}
+
+.test-badge.not-applicable {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
 /* Severity Badges */
 .severity-badge {
-    padding: 4px 12px;
-    border-radius: 16px;
+    padding: 0.25rem 0.625rem;
+    border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     display: inline-block;
     margin-left: 8px;
 }
@@ -145,10 +153,10 @@
 
 /* Step3 Test Badges */
 .step3-test-badge {
-    padding: 0.25rem 0.75rem;
+    padding: 0.25rem 0.625rem;
     border-radius: 12px;
-    font-weight: 600;
     font-size: 0.75rem;
+    font-weight: 600;
 }
 
 .step3-test-badge.pass {
@@ -173,11 +181,10 @@
 
 /* Step3 Severity Badges */
 .step3-severity-badge {
-    padding: 2px 8px;
-    border-radius: 4px;
+    padding: 0.25rem 0.625rem;
+    border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 600;
-    text-transform: uppercase;
 }
 
 .step3-severity-badge.critical {
@@ -212,12 +219,12 @@
 
 /* WCAG Badge */
 .step3-wcag-badge {
-    padding: 2px 6px;
+    padding: 0.25rem 0.625rem;
     background-color: #f3f4f6;
     color: #4b5563;
-    border-radius: 3px;
-    font-size: 0.7rem;
-    font-weight: 500;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 /* ===================================
@@ -611,5 +618,210 @@
     .step3-detail-recommendation {
         padding: var(--spacing-xs);
         font-size: 0.85rem;
+    }
+}
+
+/* ===================================
+   Scanner Details Card Component
+   세부 검사 항목 카드 스타일
+   =================================== */
+
+.scanner-details-section {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.scanner-details-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Details List Container */
+.details-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+/* Detail Card */
+.detail-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    background-color: var(--bg-primary);
+    transition: box-shadow 0.2s ease;
+}
+
+.detail-card:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+/* Card Status Colors */
+.detail-card.status-pass {
+    border-left: 3px solid #10b981;
+    background-color: rgba(16, 185, 129, 0.03);
+}
+
+.detail-card.status-fail {
+    border-left: 3px solid #ef4444;
+    background-color: rgba(239, 68, 68, 0.03);
+}
+
+.detail-card.status-warning {
+    border-left: 3px solid #f59e0b;
+    background-color: rgba(245, 158, 11, 0.03);
+}
+
+.detail-card.status-info {
+    border-left: 3px solid #3b82f6;
+    background-color: rgba(59, 130, 246, 0.03);
+}
+
+/* Card Header */
+.detail-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+}
+
+.detail-card-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+/* Card Description */
+.detail-card-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.4;
+}
+
+/* Card Row (현재 값, 권장사항) */
+.detail-card-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: var(--spacing-xs);
+    padding-top: var(--spacing-xs);
+    border-top: 1px dashed var(--border-color);
+}
+
+.detail-card-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-card-value {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    word-break: break-all;
+    display: block;
+}
+
+.detail-card-row.recommendation {
+    background-color: rgba(16, 185, 129, 0.05);
+    margin-top: var(--spacing-xs);
+    padding: var(--spacing-xs);
+    border-radius: 4px;
+    border-top: none;
+}
+
+.detail-card-recommendation {
+    font-size: 0.8rem;
+    color: #065f46;
+    line-height: 1.4;
+}
+
+/* Detail Badge */
+.detail-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: inline-block;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.detail-badge.pass {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.detail-badge.fail {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.detail-badge.fail.critical {
+    background-color: #dc2626;
+    color: white;
+}
+
+.detail-badge.fail.high {
+    background-color: #ea580c;
+    color: white;
+}
+
+.detail-badge.fail.medium {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.detail-badge.fail.low {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.detail-badge.warning {
+    background-color: #fed7aa;
+    color: #92400e;
+}
+
+.detail-badge.info {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+/* Responsive Details */
+@media (max-width: 768px) {
+    .detail-card {
+        padding: var(--spacing-xs);
+    }
+
+    .detail-card-name {
+        font-size: 0.85rem;
+    }
+
+    .detail-card-desc {
+        font-size: 0.75rem;
+    }
+
+    .detail-badge {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.4rem;
+    }
+
+    .detail-card-value {
+        font-size: 0.75rem;
+    }
+
+    .detail-card-recommendation {
+        font-size: 0.75rem;
     }
 }

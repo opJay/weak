@@ -55,6 +55,9 @@ class NoSQLInjectionScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """NoSQL Injection 스캔 실행"""
+        # 검사 항목: NoSQL 탐지, URL 파라미터, JSON 입력
+        self.checked = 3
+
         try:
             # 1. NoSQL 데이터베이스 사용 탐지
             self._detect_nosql()
@@ -69,6 +72,42 @@ class NoSQLInjectionScanner(BaseScanner):
 
         except Exception as e:
             logger.error(f"NoSQL injection scan error: {str(e)}")
+
+        # 결과 요약
+        if not self.uses_nosql:
+            self._add_detail(
+                id='nosql_injection_check',
+                name='NoSQL Injection 검사',
+                status='pass',
+                severity='info',
+                description='NoSQL 데이터베이스 사용이 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
+        elif self.vulnerabilities:
+            critical_count = len([v for v in self.vulnerabilities if v.get('severity') == 'critical'])
+            self._add_detail(
+                id='nosql_injection_check',
+                name='NoSQL Injection 검사',
+                status='fail',
+                severity='critical' if critical_count > 0 else 'high',
+                description=f'{len(self.vulnerabilities)}개의 NoSQL Injection 취약점 발견',
+                value=f'Critical: {critical_count}개',
+                expected='NoSQL Injection 취약점 없음',
+                recommendation='입력값을 타입 체크하고, $where, $regex 등 위험한 연산자를 차단하세요.'
+            )
+        else:
+            self._add_detail(
+                id='nosql_injection_check',
+                name='NoSQL Injection 검사',
+                status='pass',
+                severity='info',
+                description='NoSQL Injection 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _detect_nosql(self) -> None:
         """NoSQL 데이터베이스 사용 탐지"""

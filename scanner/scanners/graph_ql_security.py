@@ -50,14 +50,53 @@ class GraphQLSecurityScanner(BaseScanner):
         """GraphQL 보안 스캔 실행"""
         # GraphQL 사용 여부 탐지
         if not self._detect_graphql():
+            self.checked = 0
             self.vulnerabilities = []
+            self._add_detail(
+                id='graphql_check',
+                name='GraphQL 보안 검사',
+                status='pass',
+                severity='info',
+                description='GraphQL 사용이 감지되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
+
+        # 검사 항목: Introspection, Query Depth, Batch, Complexity
+        self.checked = 4
 
         # 각 보안 검사 수행
         self._check_introspection()
         self._check_query_depth()
         self._check_batch_queries()
         self._check_query_complexity()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') in ['critical', 'high']])
+            self._add_detail(
+                id='graphql_check',
+                name='GraphQL 보안 검사',
+                status='fail',
+                severity='high' if high_count > 0 else 'medium',
+                description=f'{len(self.vulnerabilities)}개의 GraphQL 취약점 발견',
+                value=f'High: {high_count}개',
+                expected='GraphQL 취약점 없음',
+                recommendation='Introspection 비활성화, Query Depth 제한을 구현하세요.'
+            )
+        else:
+            self._add_detail(
+                id='graphql_check',
+                name='GraphQL 보안 검사',
+                status='pass',
+                severity='info',
+                description='GraphQL 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _detect_graphql(self) -> bool:
         """GraphQL 사용 여부 탐지"""

@@ -78,12 +78,35 @@ class MixedContentScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """Mixed Content 검사 실행"""
+        # 검사 항목: HTML 리소스, 인라인 스타일, JS 리소스, Form action
+        self.checked = 4
+
         # HTTPS 페이지가 아니면 검사 불필요
         if not self.is_https:
             logger.debug(f"Non-HTTPS URL, skipping mixed content scan: {self.url}")
+            self._add_detail(
+                id='mixed_content_summary',
+                name='Mixed Content 검사',
+                status='pass',
+                severity='info',
+                description='HTTPS가 아닌 페이지 (검사 불필요)',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         if not self.html_content:
+            self._add_detail(
+                id='mixed_content_summary',
+                name='Mixed Content 검사',
+                status='pass',
+                severity='info',
+                description='검사할 HTML 콘텐츠 없음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
             return
 
         # 1. HTML 태그의 HTTP 리소스 검사
@@ -100,6 +123,32 @@ class MixedContentScanner(BaseScanner):
 
         # 5. CSP upgrade-insecure-requests 확인
         self._check_csp_upgrade_directive()
+
+        # 전체 결과 요약
+        if self.issues:
+            blockable = len([i for i in self.issues if 'blockable' in i.get('category', '')])
+            severity = 'high' if blockable > 0 else 'medium'
+            self._add_detail(
+                id='mixed_content_summary',
+                name='Mixed Content 검사',
+                status='fail',
+                severity=severity,
+                description=f'{len(self.issues)}개의 Mixed Content 발견',
+                value=f'Blockable: {blockable}개',
+                expected='HTTP 리소스 없음',
+                recommendation='모든 리소스를 HTTPS로 변경하세요.'
+            )
+        else:
+            self._add_detail(
+                id='mixed_content_summary',
+                name='Mixed Content 검사',
+                status='pass',
+                severity='info',
+                description='Mixed Content가 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _scan_html_resources(self) -> None:
         """HTML 태그에서 HTTP 리소스 검사"""

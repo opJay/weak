@@ -58,6 +58,8 @@ class RaceConditionScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """실제 스캔 로직 실행"""
+        # 검사 항목: 동시 요청, 상태 변경 엔드포인트
+        self.checked = 2
 
         # HTTP 요청 수행 (html_content가 없는 경우)
         if not self.html_content and self.url:
@@ -78,20 +80,30 @@ class RaceConditionScanner(BaseScanner):
         if self.html_content:
             self._detect_state_changing_endpoints()
 
-        # 기본 race condition 체크
-        if self.url:
-            self.issues.append({
-                'type': 'Race Condition Check',
-                'severity': 'info',
-                'description': 'Concurrent request handling tested'
-            })
-        # 기본 race condition 체크
-        if self.url:
-            self.issues.append({
-                'type': 'Race Condition Check',
-                'severity': 'info',
-                'description': 'Concurrent request handling tested'
-            })
+        # 결과 요약
+        if self.vulnerabilities:
+            high_count = len([v for v in self.vulnerabilities if v.get('severity') in ['critical', 'high', 'medium']])
+            self._add_detail(
+                id='race_condition_check',
+                name='경쟁 상태 검사',
+                status='fail',
+                severity='medium' if high_count > 0 else 'low',
+                description=f'{len(self.vulnerabilities)}개의 경쟁 상태 취약점 발견',
+                value=f'발견: {len(self.vulnerabilities)}개',
+                expected='경쟁 상태 취약점 없음',
+                recommendation='트랜잭션 격리 수준을 설정하고, 멱등성 키를 사용하세요.'
+            )
+        else:
+            self._add_detail(
+                id='race_condition_check',
+                name='경쟁 상태 검사',
+                status='pass',
+                severity='info',
+                description='경쟁 상태 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
     def _build_result(self) -> Dict[str, Any]:
         """결과 구성"""
         return {

@@ -25,12 +25,12 @@ class HTTPMethodScanner(BaseScanner):
 
     # 스캐너 메타데이터
     metadata = {
-        'id': 'http_methods',
+        'id': 'http_method',
         'name': 'HTTP 메서드 검사',
         'icon': '📡',
         'description': '위험한 HTTP 메서드 활성화 검사',
         'weight': 0.5,
-        'field': 'http_methods',
+        'field': 'http_method',
         'category': 'security_basic',
         'OWASP': 'A05:2025',
     }
@@ -56,6 +56,9 @@ class HTTPMethodScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """HTTP 메서드 검사 실행"""
+        # 검사 항목: OPTIONS 메서드, TRACE 메서드
+        self.checked = 2
+
         if not self.url:
             logger.warning("No URL provided for HTTP method scan")
             return
@@ -74,6 +77,16 @@ class HTTPMethodScanner(BaseScanner):
 
             if not allowed_methods:
                 logger.debug(f"No Allow header in OPTIONS response for {self.url}")
+                self._add_detail(
+                    id='options_method',
+                    name='HTTP 메서드 허용 목록',
+                    status='pass',
+                    severity='info',
+                    description='Allow 헤더가 없음 (기본 설정)',
+                    value=None,
+                    expected=None,
+                    recommendation=None
+                )
                 return
 
             # 위험한 메서드 찾기
@@ -91,10 +104,40 @@ class HTTPMethodScanner(BaseScanner):
                     'evidence': f'Allow: {allowed_methods}',
                     'recommendation': '불필요한 HTTP 메서드를 비활성화하세요.'
                 })
+                self._add_detail(
+                    id='options_method',
+                    name='HTTP 메서드 허용 목록',
+                    status='warning',
+                    severity='medium',
+                    description=f'위험한 메서드 허용: {", ".join(dangerous_found)}',
+                    value=allowed_methods,
+                    expected='GET, POST, HEAD만 허용',
+                    recommendation='불필요한 HTTP 메서드를 비활성화하세요.'
+                )
+            else:
+                self._add_detail(
+                    id='options_method',
+                    name='HTTP 메서드 허용 목록',
+                    status='pass',
+                    severity='info',
+                    description='위험한 HTTP 메서드가 허용되지 않음',
+                    value=allowed_methods,
+                    expected=None,
+                    recommendation=None
+                )
 
-        except RequestException as e:
+        except Exception as e:
             logger.debug(f"OPTIONS request failed: {str(e)}")
-            # OPTIONS 요청 실패는 정상적일 수 있음
+            self._add_detail(
+                id='options_method',
+                name='HTTP 메서드 허용 목록',
+                status='pass',
+                severity='info',
+                description='OPTIONS 요청 불가 (일반적으로 안전)',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _check_trace_method(self) -> None:
         """TRACE 메서드 직접 테스트 (XST 공격 가능성)"""
@@ -113,7 +156,8 @@ class HTTPMethodScanner(BaseScanner):
                 })
 
                 # TRACE 응답에 요청 헤더가 반사되는지 확인
-                if response.text and 'TRACE' in response.text:
+                xst_vulnerable = response.text and 'TRACE' in response.text
+                if xst_vulnerable:
                     self.issues.append({
                         'type': 'XST (Cross-Site Tracing) Vulnerable',
                         'severity': 'high',
@@ -121,9 +165,40 @@ class HTTPMethodScanner(BaseScanner):
                         'recommendation': 'TRACE 메서드를 즉시 비활성화하세요.'
                     })
 
-        except RequestException as e:
+                self._add_detail(
+                    id='trace_method',
+                    name='TRACE 메서드 검사',
+                    status='fail',
+                    severity='high' if xst_vulnerable else 'medium',
+                    description='TRACE 메서드 활성화됨' + (' (XST 취약)' if xst_vulnerable else ''),
+                    value=f'Status: {response.status_code}',
+                    expected='405 Method Not Allowed',
+                    recommendation='TRACE 메서드를 비활성화하세요.'
+                )
+            else:
+                self._add_detail(
+                    id='trace_method',
+                    name='TRACE 메서드 검사',
+                    status='pass',
+                    severity='info',
+                    description='TRACE 메서드가 비활성화됨',
+                    value='405 Method Not Allowed',
+                    expected=None,
+                    recommendation=None
+                )
+
+        except Exception as e:
             logger.debug(f"TRACE request failed: {str(e)}")
-            # TRACE 요청 실패는 정상적일 수 있음
+            self._add_detail(
+                id='trace_method',
+                name='TRACE 메서드 검사',
+                status='pass',
+                severity='info',
+                description='TRACE 요청 불가 (일반적으로 안전)',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _get_additional_fields(self) -> Dict[str, Any]:
         """추가 필드 반환"""

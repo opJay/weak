@@ -69,6 +69,8 @@ class BaseScanner(ABC):
         self.html_content = html_content
         self.vulnerabilities: List[Dict[str, Any]] = []
         self.issues: List[Dict[str, Any]] = []  # 일부 스캐너는 issues 사용
+        self.details: List[Dict[str, Any]] = []  # 세부 검사 항목 리스트
+        self.checked: int = 0  # 검사 대상 수 (0 = 해당없음)
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # HTTP 클라이언트 설정 (의존성 주입)
@@ -139,7 +141,17 @@ class BaseScanner(ABC):
             field_name: items,
             'total': len(items),
             'scanner_id': self.metadata.get('id', 'unknown'),
+            'checked': self.checked,
+            'passed': max(0, self.checked - len(items)),
         }
+
+        # 상태 계산
+        if self.checked == 0:
+            result['status'] = 'not_applicable'
+        elif len(items) == 0:
+            result['status'] = 'pass'
+        else:
+            result['status'] = 'fail'
 
         # 심각도 계산 및 추가
         severity = self._calculate_severity()
@@ -158,6 +170,10 @@ class BaseScanner(ABC):
                 has_field = f"has_{field}"
 
             result[has_field] = len(items) > 0
+
+        # 세부 검사 항목 추가
+        if self.details:
+            result['details'] = self.details
 
         # 서브클래스별 추가 필드 병합
         additional_fields = self._get_additional_fields()
@@ -234,6 +250,41 @@ class BaseScanner(ABC):
             return 'low'
 
         return 'safe'
+
+    def _add_detail(
+        self,
+        id: str,
+        name: str,
+        status: str,
+        severity: str = 'info',
+        description: str = '',
+        value: Optional[str] = None,
+        expected: Optional[str] = None,
+        recommendation: Optional[str] = None
+    ) -> None:
+        """
+        세부 검사 항목 추가
+
+        Args:
+            id: 항목 고유 ID (예: 'hsts', 'csp')
+            name: 항목 이름 (예: 'Strict-Transport-Security')
+            status: 상태 ('pass' | 'fail' | 'warning' | 'info')
+            severity: 심각도 ('critical' | 'high' | 'medium' | 'low' | 'info')
+            description: 설명
+            value: 현재 값 (있으면)
+            expected: 기대값 (있으면)
+            recommendation: 권장사항
+        """
+        self.details.append({
+            'id': id,
+            'name': name,
+            'status': status,
+            'severity': severity,
+            'description': description,
+            'value': value,
+            'expected': expected,
+            'recommendation': recommendation
+        })
 
     def _get_additional_fields(self) -> Dict[str, Any]:
         """

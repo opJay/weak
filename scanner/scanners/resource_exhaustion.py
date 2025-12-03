@@ -58,12 +58,40 @@ class ResourceExhaustionScanner(BaseScanner):
 
     def _execute_scan(self) -> None:
         """실제 스캔 로직 실행"""
+        # 검사 항목: 파일 업로드 제한, API 크기 제한
+        self.checked = 2
+
         # 1. 파일 업로드 폼 검사
         if self.html_content:
             self._check_file_upload_limits()
 
         # 2. API 크기 제한 검사
         self._check_request_size_limits()
+
+        # 결과 요약
+        if self.vulnerabilities:
+            medium_count = len([v for v in self.vulnerabilities if v.get('severity') == 'medium'])
+            self._add_detail(
+                id='resource_exhaustion_check',
+                name='리소스 소진 검사',
+                status='fail',
+                severity='medium' if medium_count > 0 else 'low',
+                description=f'{len(self.vulnerabilities)}개의 리소스 소진 취약점 발견',
+                value=f'Medium: {medium_count}개',
+                expected='리소스 소진 취약점 없음',
+                recommendation='파일 크기와 요청 크기를 제한하세요.'
+            )
+        else:
+            self._add_detail(
+                id='resource_exhaustion_check',
+                name='리소스 소진 검사',
+                status='pass',
+                severity='info',
+                description='리소스 소진 취약점이 발견되지 않음',
+                value=None,
+                expected=None,
+                recommendation=None
+            )
 
     def _build_result(self) -> Dict[str, Any]:
         """결과 구성"""

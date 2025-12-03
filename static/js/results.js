@@ -560,6 +560,62 @@ function renderVulnerabilities(vulnerabilities) {
 }
 
 /**
+ * Render scanner details (세부 검사 항목 - 반응형 카드/테이블)
+ */
+function renderScannerDetails(details) {
+    if (!details || details.length === 0) return '';
+
+    let html = '<div class="scanner-details-section">';
+    html += '<h3>📋 세부 검사 항목</h3>';
+    html += '<div class="details-list">';
+
+    details.forEach(item => {
+        const statusClass = item.status || 'info';
+        const statusBadge = getDetailStatusBadge(item.status, item.severity);
+        const displayValue = item.value ? escapeHtml(String(item.value)) : null;
+        const displayRecommendation = (item.status !== 'pass' && item.recommendation) ? item.recommendation : null;
+
+        html += `
+            <div class="detail-card status-${statusClass}">
+                <div class="detail-card-header">
+                    <span class="detail-card-name">${escapeHtml(item.name)}</span>
+                    ${statusBadge}
+                </div>
+                ${item.description ? `<div class="detail-card-desc">${escapeHtml(item.description)}</div>` : ''}
+                ${displayValue ? `
+                    <div class="detail-card-row">
+                        <span class="detail-card-label">현재 값</span>
+                        <code class="detail-card-value">${displayValue}</code>
+                    </div>
+                ` : ''}
+                ${displayRecommendation ? `
+                    <div class="detail-card-row recommendation">
+                        <span class="detail-card-label">권장사항</span>
+                        <span class="detail-card-recommendation">${escapeHtml(displayRecommendation)}</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+
+    html += '</div></div>';
+    return html;
+}
+
+/**
+ * Get status badge for detail item
+ */
+function getDetailStatusBadge(status, severity) {
+    const badges = {
+        'pass': '<span class="detail-badge pass">✓ 통과</span>',
+        'fail': `<span class="detail-badge fail ${severity || 'medium'}">✗ 실패</span>`,
+        'warning': '<span class="detail-badge warning">⚠ 주의</span>',
+        'info': '<span class="detail-badge info">ℹ 정보</span>'
+    };
+    return badges[status] || `<span class="detail-badge">${status}</span>`;
+}
+
+/**
  * Render security headers
  */
 function renderSecurityHeaders(headers) {
@@ -1001,7 +1057,13 @@ function createSummaryTestItem(scanner, category) {
     let badgeClass = 'pass';
     let badgeText = '통과';
 
-    if (scanner.status === 'fail') {
+    if (scanner.status === 'skipped') {
+        badgeClass = 'skipped';
+        badgeText = '스킵';
+    } else if (scanner.status === 'not_applicable') {
+        badgeClass = 'not-applicable';
+        badgeText = '해당없음';
+    } else if (scanner.status === 'fail') {
         if (scanner.severity === 'critical') {
             badgeClass = 'critical';
             badgeText = `치명적 ${scanner.count}개`;
@@ -1014,6 +1076,11 @@ function createSummaryTestItem(scanner, category) {
         } else {
             badgeClass = 'info';
             badgeText = `낮음 ${scanner.count}개`;
+        }
+    } else if (scanner.status === 'pass') {
+        // 통과 시 checked/passed 값이 있으면 상세 표시
+        if (scanner.checked && scanner.checked > 0) {
+            badgeText = `통과 ${scanner.passed}/${scanner.checked}`;
         }
     }
 
@@ -1143,6 +1210,11 @@ function displayEnhancedDetailedInfo(detail) {
                 </div>
             </div>
         `;
+    }
+
+    // Details (세부 검사 항목) - 먼저 표시
+    if (detail.details && detail.details.length > 0) {
+        html += renderScannerDetails(detail.details);
     }
 
     // Vulnerabilities list
