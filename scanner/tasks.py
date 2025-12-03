@@ -321,6 +321,23 @@ def scan_security(scan_request_id):
         # 스캐너 메타데이터를 수집할 리스트
         scanner_metadata = []
 
+        # 모든 스캐너 결과 변수를 기본값으로 초기화
+        # (스캐너가 비활성화된 경우에도 calculate_security_score_ultra_advanced에서 사용됨)
+        header_results = {'headers': {}, 'issues': [], 'skipped': True}
+        xss_results = {'total': 0, 'has_xss': False, 'vulnerabilities': [], 'skipped': True}
+        sqli_results = {'total': 0, 'has_sqli': False, 'vulnerabilities': [], 'skipped': True}
+        cors_results = {'has_issues': False, 'issues': [], 'skipped': True}
+        cookie_results = {'total': 0, 'issues': [], 'skipped': True}
+        csrf_results = {'has_protection': True, 'issues': [], 'skipped': True}
+        clickjacking_results = {'protected': True, 'issues': [], 'skipped': True}
+        info_results = {'has_issues': False, 'issues': [], 'skipped': True}
+        method_results = {'has_issues': False, 'issues': [], 'skipped': True}
+        file_results = {'has_issues': False, 'issues': [], 'skipped': True}
+        mixed_results = {'has_issues': False, 'issues': [], 'skipped': True}
+        sri_results = {'has_issues': False, 'issues': [], 'skipped': True}
+        listing_results = {'has_issues': False, 'issues': [], 'skipped': True}
+        redirect_results = {'has_issues': False, 'issues': [], 'skipped': True}
+
         # 1. 보안 헤더 검사 (강화)
         progress, name = pm.next_progress('security')
         logger.info(f'{name}: {progress:.1f}%')

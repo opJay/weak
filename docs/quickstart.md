@@ -249,7 +249,7 @@ uv add --dev pytest pytest-django pytest-cov
 pytest
 
 # 특정 테스트 파일 실행
-pytest tests/unit/test_batch2_scanners.py
+pytest tests/unit/test_security_basic_xss_sqli.py
 
 # 코드 커버리지와 함께
 pytest --cov=scanner --cov-report=html
@@ -265,7 +265,7 @@ uv run python manage.py generate_golden_tests
 uv run python manage.py verify_golden_tests
 ```
 
-자세한 테스트 가이드는 [TESTING.md](TESTING.md)를 참고하세요.
+자세한 테스트 가이드는 [테스팅 가이드](testing.md)를 참고하세요.
 
 ## 12. 다음 단계
 
@@ -290,7 +290,7 @@ uv run python manage.py verify_golden_tests
 ## 도움이 필요하신가요?
 
 - **이슈**: [GitHub Issues](https://github.com/opJay/weak/issues)
-- **문서**: [README.md](README.md)
+- **문서**: [README.md](../README.md)
 - **라이선스**: MIT License
 
 ---

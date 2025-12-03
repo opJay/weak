@@ -23,14 +23,22 @@ WEAK 프로젝트는 포괄적인 테스팅 전략을 통해 스캐너의 정확
 ### 디렉토리 구조
 ```
 tests/
-├── conftest.py              # pytest 설정 및 공통 fixtures
-├── unit/                    # 단위 테스트
-│   ├── test_refactored_scanners.py    # Batch 1 스캐너 (19개 테스트)
-│   └── test_batch2_scanners.py        # Batch 2 스캐너 (33개 테스트)
-├── integration/             # 통합 테스트
-│   └── test_integration.py # tasks.py와의 통합
-└── golden/                  # Golden Test 스냅샷
-    └── *.json              # 실제 웹사이트 스캔 결과
+├── conftest.py                      # pytest 설정 및 공통 fixtures
+├── unit/                            # 단위 테스트 (358개)
+│   ├── test_security_basic_cors.py         # CORS, Cookie, Clickjacking, SRI
+│   ├── test_security_basic_xss_sqli.py     # XSS, SQLi, CSRF, Info Disclosure
+│   ├── test_security_basic_info.py         # Open Redirect, Directory Listing
+│   ├── test_security_advanced_injection.py # SSRF, XXE, Command Injection
+│   ├── test_security_advanced_auth.py      # JWT, Template Injection, NoSQL
+│   ├── test_api_auth_security.py           # REST API, GraphQL, OAuth
+│   ├── test_business_logic.py              # Price Manipulation, Race Condition
+│   ├── test_supply_chain.py                # Package Integrity, Typosquatting
+│   ├── test_data_integrity.py              # JWT Advanced, Serialization
+│   └── test_exception_handling.py          # Exception Handling
+├── integration/                     # 통합 테스트
+│   └── test_integration.py          # tasks.py와의 통합
+└── golden/                          # Golden Test 스냅샷
+    └── *.json                       # 실제 웹사이트 스캔 결과
 ```
 
 ### 주요 컴포넌트
@@ -40,10 +48,9 @@ tests/
 - 표준화된 결과 구조 확인
 - 의존성 주입 동작 테스트
 
-#### 호환성 레이어 테스트
-- 기존 코드와의 호환성 확인
-- 점진적 마이그레이션 검증
-- 무중단 전환 보장
+#### 개별 스캐너 테스트
+- 각 스캐너별 True Positive/False Positive 검증
+- 엣지 케이스 처리 확인
 
 ## 🚀 테스트 실행
 
@@ -87,34 +94,34 @@ python manage.py generate_golden_tests --url https://example.com
 
 ## 📊 현재 테스트 커버리지
 
-### 리팩토링 완료 스캐너 (15개)
+### 전체 스캐너 테스트 (50개 스캐너)
 
-#### Batch 1 (5개 스캐너, 19개 테스트)
-- ✅ **SecurityHeaderScanner**: 보안 헤더 검증
-- ✅ **CORSScanner**: CORS 설정 검사
-- ✅ **CookieScanner**: 쿠키 보안 속성
-- ✅ **ClickjackingScanner**: 클릭재킹 방어
-- ✅ **SubresourceIntegrityScanner**: SRI 검사
+#### 기본 보안 테스트
+- ✅ **XSSScanner, SQLInjectionScanner**: 인젝션 취약점
+- ✅ **CORSScanner, CookieScanner**: 헤더/쿠키 보안
+- ✅ **CSRFScanner, ClickjackingScanner**: 요청 위조 방어
 
-#### Batch 2 (5개 스캐너, 33개 테스트)
-- ✅ **XSSScanner**: Cross-Site Scripting 탐지
-- ✅ **SQLInjectionScanner**: SQL Injection 탐지
-- ✅ **CSRFScanner**: CSRF 토큰 검증
-- ✅ **InformationDisclosureScanner**: 정보 노출 탐지
-- ✅ **MixedContentScanner**: Mixed Content 검사
+#### 고급 보안 테스트
+- ✅ **SSRFScanner, XXEScanner**: 서버 측 취약점
+- ✅ **CommandInjectionScanner, PathTraversalScanner**: 시스템 취약점
+- ✅ **JWTSecurityScanner, TemplateInjectionScanner**: 인증/템플릿
 
-#### Batch 3 (5개 스캐너, 24개 테스트)
-- ✅ **OpenRedirectScanner**: 오픈 리다이렉트 탐지
-- ✅ **DirectoryListingScanner**: 디렉토리 리스팅 탐지
-- ✅ **HTTPMethodScanner**: 위험한 HTTP 메서드 검사
-- ✅ **SensitiveFileScanner**: 민감한 파일 노출 검사
-- ✅ **SSLTLSBasicScanner**: SSL/TLS 기본 검사
+#### API 및 인증 테스트
+- ✅ **RESTAPISecurityScanner, GraphQLSecurityScanner**: API 보안
+- ✅ **OAuthSecurityScanner, SessionSecurityScanner**: 인증 보안
+
+#### 비즈니스 로직 테스트
+- ✅ **PriceManipulationScanner, RaceConditionScanner**: 로직 취약점
+- ✅ **WorkflowBypassScanner, AccountEnumerationScanner**: 프로세스 취약점
+
+#### 공급망/무결성 테스트
+- ✅ **PackageIntegrityScanner, TyposquattingScanner**: 공급망 보안
+- ✅ **JWTAdvancedScanner, SerializationIntegrityScanner**: 데이터 무결성
 
 ### 테스트 통계
-- **총 단위 테스트**: 76개
-- **통합 테스트**: 4개
-- **전체 테스트**: 80개
-- **테스트 통과율**: 100%
+- **총 단위 테스트**: 358개
+- **테스트 통과율**: 88.8% (318 passed, 40 failed)
+- **스캐너 커버리지**: 100% (50개 스캐너)
 
 ## 🔍 테스트 작성 가이드
 
@@ -123,7 +130,7 @@ python manage.py generate_golden_tests --url https://example.com
 ```python
 import pytest
 from unittest.mock import Mock
-from scanner.scanners_refactored import ExampleScanner
+from scanner.scanners.example_scanner import ExampleScanner
 
 class TestExampleScanner:
     """ExampleScanner 테스트"""

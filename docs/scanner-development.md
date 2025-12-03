@@ -17,11 +17,13 @@ scanner/
 ├── core/
 │   ├── base.py          # BaseScanner 클래스
 │   └── registry.py      # 자동 디스커버리 시스템
-├── scanners/            # 개별 스캐너 파일들 (자동 발견)
+├── scanners/            # 50개 개별 스캐너 파일들 (자동 발견)
 │   ├── xss_scanner.py
 │   ├── sql_injection_scanner.py
-│   └── ...
-└── scanners_compat.py   # 하위 호환성 레이어
+│   ├── cors.py
+│   ├── csrf.py
+│   └── ... (46개 더)
+└── tasks.py             # 백그라운드 작업 처리
 ```
 
 ## 새 스캐너 추가하기

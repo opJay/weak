@@ -25,22 +25,18 @@ WEAK is a Django-based web vulnerability scanner that provides comprehensive sec
 ```
 weak/
 ├── scanner/          # Core scanning logic
-│   ├── base.py       # BaseScanner 기본 클래스 (템플릿 메서드 패턴)
-│   ├── scanners_refactored_batch1.py  # Basic security (3개)
-│   ├── scanners_refactored_batch2.py  # Security headers & cookies (5개)
-│   ├── scanners_refactored_batch3.py  # Information disclosure (4개)
-│   ├── scanners_refactored_batch4.py  # Advanced security (5개)
-│   ├── scanners_refactored_batch5.py  # Advanced security continued (5개)
-│   ├── scanners_refactored_batch6.py  # API & auth security (8개)
-│   ├── scanners_refactored_batch7.py  # Business logic (7개)
-│   ├── scanners_refactored_batch8.py  # Supply chain advanced (5개)
-│   ├── scanners_refactored_batch9.py  # Data integrity advanced (4개)
-│   ├── scanners_refactored_batch10.py  # Exception handling (1개)
-│   ├── scanners_compat.py  # 호환성 레이어 (완전 마이그레이션 완료)
-│   ├── scanner_migration.py  # 마이그레이션 매핑 관리
+│   ├── core/         # 스캐너 코어 모듈
+│   │   ├── base.py   # BaseScanner 기본 클래스 (템플릿 메서드 패턴)
+│   │   └── registry.py  # 자동 디스커버리 시스템
+│   ├── scanners/     # 50개 개별 스캐너 파일
+│   │   ├── xss_scanner.py
+│   │   ├── sql_injection_scanner.py
+│   │   ├── cors.py
+│   │   ├── csrf.py
+│   │   ├── ssrf.py
+│   │   └── ... (45개 더)
 │   ├── tasks.py      # Background task processing
-│   ├── progress_manager.py  # Progress tracking system (50 scanners total)
-│   ├── security_scan_refactored.py  # Refactored security scanning
+│   ├── progress_manager.py  # Progress tracking system (50 scanners)
 │   ├── standards_checker.py  # Web standards validation
 │   └── models.py     # Database models
 ├── api/              # REST API endpoints
@@ -50,7 +46,6 @@ weak/
 ├── core/             # Core utilities and middleware
 │   ├── middleware.py # Custom middleware
 │   └── views.py      # Base views
-├── reports/          # Report generation (optional)
 ├── templates/        # HTML templates
 │   └── scanner/
 │       └── index.html
@@ -61,23 +56,24 @@ weak/
 │   │   └── wizard.css    # Three-step wizard styles
 │   └── js/
 │       └── scanner.js    # Frontend logic with detailed views
-├── tests/            # 테스트 코드 (269개 테스트 완료)
+├── tests/            # 테스트 코드 (358개 테스트)
 │   ├── conftest.py   # pytest 설정 및 fixtures
 │   ├── unit/         # 단위 테스트
-│   │   ├── test_batch1_scanners.py      # Batch 1 테스트 (19개)
-│   │   ├── test_batch2_scanners.py      # Batch 2 테스트 (33개)
-│   │   ├── test_batch3_scanners.py      # Batch 3 테스트 (26개)
-│   │   ├── test_batch4_scanners.py      # Batch 4 테스트 (30개)
-│   │   ├── test_batch5_scanners.py      # Batch 5 테스트 (32개)
-│   │   ├── test_batch6_scanners.py      # Batch 6 테스트 (37개)
-│   │   ├── test_batch7_scanners.py      # Batch 7 테스트 (37개)
-│   │   ├── test_batch8_scanners.py      # Batch 8 테스트 (26개)
-│   │   ├── test_batch9_scanners.py      # Batch 9 테스트 (28개)
-│   │   └── test_batch10_scanners.py     # Batch 10 테스트 (21개)
+│   │   ├── test_security_basic_*.py     # 기본 보안 테스트
+│   │   ├── test_security_advanced_*.py  # 고급 보안 테스트
+│   │   ├── test_api_auth_security.py    # API 인증 테스트
+│   │   ├── test_business_logic.py       # 비즈니스 로직 테스트
+│   │   ├── test_supply_chain.py         # 공급망 보안 테스트
+│   │   └── test_data_integrity.py       # 데이터 무결성 테스트
 │   ├── integration/  # 통합 테스트
 │   │   └── test_integration.py          # tasks.py 통합 테스트
 │   └── golden/       # Golden test 스냅샷
 │       └── *.json    # 실제 웹사이트 스캔 결과
+├── docs/             # 문서
+│   ├── quickstart.md
+│   ├── deployment.md
+│   ├── testing.md
+│   └── scanner-development.md
 ├── config/           # Django settings
 │   ├── settings.py   # Main settings
 │   ├── celery.py     # Celery configuration
@@ -89,11 +85,11 @@ weak/
 
 ### Scanner Architecture
 - **Self-contained scanners**: Each scanner class contains its own metadata
-- **No central registry**: Scanners manage their own configuration
+- **Auto-discovery system**: `scanner/core/registry.py`를 통한 스캐너 자동 발견
+- **Individual scanner files**: `scanner/scanners/` 디렉토리에 50개 개별 스캐너 파일
 - **Weighted progress system**: Dynamic progress calculation based on scanner weights
 - **BaseScanner pattern**: 모든 스캐너가 Template method pattern을 사용하는 표준화된 인터페이스 구현
 - **Dependency injection**: HTTP 클라이언트 주입으로 테스트 가능성 향상
-- **Compatibility layer**: scanners_compat.py를 통한 레거시 코드와의 완벽한 하위 호환성 유지
 
 ### UI/UX Philosophy
 - **Three-step wizard pattern**: Input → Progress → Results
@@ -110,7 +106,7 @@ weak/
 모든 스캐너는 BaseScanner 클래스를 상속받아 Template Method 패턴을 통해 구현됩니다:
 
 ```python
-from scanner.base import BaseScanner
+from scanner.core.base import BaseScanner
 from typing import Dict, Any
 
 class ExampleScanner(BaseScanner):
@@ -136,9 +132,9 @@ class ExampleScanner(BaseScanner):
         return {'custom_field': 'value'}
 ```
 
-### 호환성 레이어
+### 스캐너 파일 위치
 
-기존 코드와의 완벽한 하위 호환성을 위해 `scanners_compat.py`가 래퍼 클래스를 제공합니다. 이를 통해 레거시 코드 수정 없이 새로운 스캐너를 사용할 수 있습니다.
+새로운 스캐너는 `scanner/scanners/` 디렉토리에 개별 파일로 생성합니다. 파일을 저장하면 `scanner/core/registry.py`의 자동 디스커버리 시스템이 자동으로 스캐너를 등록합니다.
 
 ### Progress Management
 - Uses `ProgressManager` class for weighted distribution

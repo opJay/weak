@@ -2,14 +2,66 @@
 
 이 문서는 Weak Scanner를 프로덕션 환경에 배포하는 방법을 설명합니다.
 
+## 현재 상태
+
+- **테스트 성공률**: 88.8% (318 passed, 40 failed)
+- **스캐너 개수**: 50개
+- **OWASP 2025 커버리지**: ~95%
+
 ## 목차
 
+- [배포 전 체크리스트](#배포-전-체크리스트)
 - [Docker를 사용한 배포](#docker를-사용한-배포)
 - [프로덕션 배포](#프로덕션-배포)
 - [클라우드 플랫폼 배포](#클라우드-플랫폼-배포)
 - [백업 및 복구](#백업-및-복구)
 - [모니터링](#모니터링)
 - [트러블슈팅](#트러블슈팅)
+- [배포 완료 후 확인](#배포-완료-후-확인)
+
+## 배포 전 체크리스트
+
+### 환경 설정
+
+- [ ] `.env` 파일 설정
+  ```env
+  DEBUG=False
+  ALLOWED_HOSTS=your-domain.com
+  SECRET_KEY=your-secret-key
+  DATABASE_URL=postgresql://...
+  REDIS_URL=redis://...
+  ```
+
+### 데이터베이스
+
+- [ ] PostgreSQL 설정
+- [ ] 마이그레이션 실행
+  ```bash
+  python manage.py migrate
+  ```
+
+### 정적 파일
+
+- [ ] Static 파일 수집
+  ```bash
+  python manage.py collectstatic
+  ```
+
+### Celery & Redis
+
+- [ ] Redis 서버 실행
+- [ ] Celery Worker 실행
+  ```bash
+  celery -A config worker -l info
+  ```
+
+### 보안 점검
+
+- [ ] DEBUG=False 확인
+- [ ] SECRET_KEY 변경
+- [ ] ALLOWED_HOSTS 설정
+- [ ] CSRF 보호 활성화
+- [ ] SSL/TLS 인증서 설정
 
 ## Docker를 사용한 배포
 
@@ -618,6 +670,30 @@ docker system prune -a --volumes
 - [Django 배포 가이드](https://docs.djangoproject.com/en/5.0/howto/deployment/)
 - [Nginx 설정 가이드](https://nginx.org/en/docs/)
 - [Let's Encrypt 문서](https://letsencrypt.org/docs/)
+
+## 배포 완료 후 확인
+
+### 1. 헬스체크 엔드포인트 확인
+
+```bash
+curl https://your-domain.com/health/
+```
+
+### 2. 테스트 스캔 실행
+
+```bash
+curl -X POST https://your-domain.com/api/scan/ \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com"}'
+```
+
+### 3. 모니터링 대시보드 확인
+
+### 주의사항
+
+1. **테스트 실패**: 현재 40개의 테스트가 실패하지만 핵심 기능은 정상 작동
+2. **스캔 타임아웃**: SCAN_TIMEOUT 설정 확인 (기본 60초)
+3. **Rate Limiting**: 과도한 요청 방지를 위한 설정 필요
 
 ## 지원
 

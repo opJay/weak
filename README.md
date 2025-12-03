@@ -496,7 +496,7 @@ python main.py runserver
 - **API 문서**: http://localhost:8000/api/docs/
 - **관리자**: http://localhost:8000/admin/
 
-자세한 내용은 [QUICKSTART.md](QUICKSTART.md)를 참고하세요.
+자세한 내용은 [빠른 시작 가이드](docs/quickstart.md)를 참고하세요.
 
 ## 프로젝트 관리 CLI
 
@@ -583,24 +583,19 @@ weak/
 │   ├── celery.py       # Celery 설정
 │   └── urls.py         # URL 라우팅
 ├── scanner/            # 메인 스캐너 앱
-│   ├── base.py         # BaseScanner 템플릿 메서드 패턴
+│   ├── core/           # 스캐너 코어
+│   │   ├── base.py     # BaseScanner 템플릿 메서드 패턴
+│   │   └── registry.py # 자동 디스커버리 시스템
+│   ├── scanners/       # 50개 개별 스캐너 파일
+│   │   ├── xss_scanner.py
+│   │   ├── sql_injection_scanner.py
+│   │   ├── cors.py
+│   │   ├── csrf.py
+│   │   └── ... (46개 더)
 │   ├── models.py       # 데이터 모델
 │   ├── tasks.py        # Celery 비동기 작업
-│   ├── scanners_refactored_batch1.py   # Basic security (3개)
-│   ├── scanners_refactored_batch2.py   # Security headers & cookies (5개)
-│   ├── scanners_refactored_batch3.py   # Information disclosure (4개)
-│   ├── scanners_refactored_batch4.py   # Advanced security (5개)
-│   ├── scanners_refactored_batch5.py   # Advanced security continued (5개)
-│   ├── scanners_refactored_batch6.py   # API & auth security (8개)
-│   ├── scanners_refactored_batch7.py   # Business logic (7개)
-│   ├── scanners_refactored_batch8.py   # Supply chain advanced (5개)
-│   ├── scanners_refactored_batch9.py   # Data integrity advanced (4개)
-│   ├── scanners_refactored_batch10.py  # Exception handling (1개)
-│   ├── scanners_compat.py      # 호환성 레이어
-│   ├── scanner_migration.py    # 마이그레이션 매핑
-│   ├── security_scan_refactored.py  # 리팩토링된 보안 스캐너
 │   ├── standards_checker.py    # 웹 표준 검증
-│   ├── progress_manager.py     # 진행률 관리 (50개 스캐너)
+│   ├── progress_manager.py     # 진행률 관리
 │   └── admin.py        # 관리자 페이지
 ├── api/                # REST API
 │   ├── views.py        # API 엔드포인트
@@ -609,40 +604,37 @@ weak/
 ├── core/               # 코어 유틸리티
 │   ├── middleware.py   # 커스텀 미들웨어
 │   └── views.py        # 기본 뷰
-├── reports/            # 리포트 생성 (선택)
 ├── templates/          # HTML 템플릿
 │   └── scanner/
 │       └── index.html  # 메인 페이지 (3단계 위저드)
 ├── static/             # 정적 파일
 │   ├── css/
 │   │   ├── base.css    # 전역 스타일
-│   │   ├── scanner.css # 스캐너 스타일 (상세 결과 표시)
+│   │   ├── scanner.css # 스캐너 스타일
 │   │   └── wizard.css  # 3단계 위저드 스타일
 │   └── js/
-│       └── scanner.js  # 프론트엔드 로직 (확장된 상세 뷰)
-├── tests/              # 테스트 코드 (269개 테스트)
+│       └── scanner.js  # 프론트엔드 로직
+├── tests/              # 테스트 코드
 │   ├── conftest.py     # pytest 설정 및 fixtures
-│   ├── unit/           # 단위 테스트
-│   │   ├── test_batch1_scanners.py   # Batch 1 테스트 (19개)
-│   │   ├── test_batch2_scanners.py   # Batch 2 테스트 (33개)
-│   │   ├── test_batch3_scanners.py   # Batch 3 테스트 (26개)
-│   │   ├── test_batch4_scanners.py   # Batch 4 테스트 (30개)
-│   │   ├── test_batch5_scanners.py   # Batch 5 테스트 (32개)
-│   │   ├── test_batch6_scanners.py   # Batch 6 테스트 (37개)
-│   │   ├── test_batch7_scanners.py   # Batch 7 테스트 (37개)
-│   │   ├── test_batch8_scanners.py   # Batch 8 테스트 (26개)
-│   │   ├── test_batch9_scanners.py   # Batch 9 테스트 (28개)
-│   │   └── test_batch10_scanners.py  # Batch 10 테스트 (21개)
+│   ├── unit/           # 단위 테스트 (358개)
+│   │   ├── test_security_basic_*.py    # 기본 보안 테스트
+│   │   ├── test_security_advanced_*.py # 고급 보안 테스트
+│   │   ├── test_api_auth_security.py   # API 인증 테스트
+│   │   ├── test_business_logic.py      # 비즈니스 로직 테스트
+│   │   ├── test_supply_chain.py        # 공급망 보안 테스트
+│   │   └── test_data_integrity.py      # 데이터 무결성 테스트
 │   ├── integration/    # 통합 테스트
-│   │   └── test_integration.py       # tasks.py 통합 테스트
 │   └── golden/         # Golden test 스냅샷
-│       └── *.json      # 실제 웹사이트 스캔 결과
+├── docs/               # 문서
+│   ├── quickstart.md   # 빠른 시작 가이드
+│   ├── deployment.md   # 배포 가이드
+│   ├── testing.md      # 테스팅 가이드
+│   ├── scanner-development.md  # 스캐너 개발 가이드
+│   └── archive/        # 아카이브
 ├── main.py            # 프로젝트 관리 CLI
 ├── manage.py          # Django 관리 스크립트
-├── .env               # 환경 변수
-├── .gitignore         # Git 제외 파일
 ├── README.md          # 프로젝트 문서
-├── QUICKSTART.md      # 빠른 시작 가이드
+├── SECURITY.md        # 보안 가이드
 └── CLAUDE.md          # AI 어시스턴트용 가이드
 ```
 
@@ -761,7 +753,7 @@ docker-compose exec web python manage.py createsuperuser
 
 ### 프로덕션 배포
 
-프로덕션 환경 배포에 대한 상세한 가이드는 [DEPLOY.md](DEPLOY.md)를 참고하세요.
+프로덕션 환경 배포에 대한 상세한 가이드는 [배포 가이드](docs/deployment.md)를 참고하세요.
 
 **주요 내용:**
 - Docker Compose를 사용한 전체 스택 배포
