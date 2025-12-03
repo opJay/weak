@@ -174,6 +174,7 @@ class CSRFScanner(BaseScanner):
                     'form_index': idx,
                     'method': method,
                     'action': action,
+                    'is_sensitive': is_sensitive,
                     'description': f'{method} 폼에 CSRF 토큰이 없습니다.',
                     'recommendation': 'CSRF 토큰을 추가하여 요청의 정당성을 검증하세요.'
                 })

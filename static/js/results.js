@@ -575,11 +575,18 @@ function renderScannerDetails(details) {
         const displayValue = item.value ? escapeHtml(String(item.value)) : null;
         const displayRecommendation = (item.status !== 'pass' && item.recommendation) ? item.recommendation : null;
 
+        // 소속 레벨 배지 (level_label 사용)
+        const levelLabel = item.level_label || '';
+        const levelBadge = levelLabel ? `<span class="level-badge ${item.level || 'info'}">${levelLabel}</span>` : '';
+
         html += `
             <div class="detail-card status-${statusClass}">
                 <div class="detail-card-header">
                     <span class="detail-card-name">${escapeHtml(item.name)}</span>
-                    ${statusBadge}
+                    <div class="detail-card-badges">
+                        ${levelBadge}
+                        ${statusBadge}
+                    </div>
                 </div>
                 ${item.description ? `<div class="detail-card-desc">${escapeHtml(item.description)}</div>` : ''}
                 ${displayValue ? `
@@ -1183,29 +1190,41 @@ function displayEnhancedDetailedInfo(detail) {
     // Statistics
     if (detail.statistics) {
         const stats = detail.statistics;
+        const labels = stats.labels || {
+            critical: '긴급', high: '위험', medium: '주의', low: '유의', info: '정보'
+        };
+
         html += `
             <div class="detail-statistics">
                 <h3>📊 검사 통계</h3>
                 <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-label">총 취약점</span>
-                        <span class="stat-value">${stats.total_vulnerabilities || 0}</span>
+                    <div class="stat-item total">
+                        <span class="stat-label">총 항목</span>
+                        <span class="stat-value">${stats.total_checked || 0}</span>
+                    </div>
+                    <div class="stat-item passed">
+                        <span class="stat-label">통과</span>
+                        <span class="stat-value passed">${stats.passed_count || 0}</span>
                     </div>
                     ${stats.critical_count ? `<div class="stat-item">
-                        <span class="stat-label">치명적</span>
+                        <span class="stat-label">${labels.critical}</span>
                         <span class="stat-value critical">${stats.critical_count}</span>
                     </div>` : ''}
                     ${stats.high_count ? `<div class="stat-item">
-                        <span class="stat-label">높음</span>
+                        <span class="stat-label">${labels.high}</span>
                         <span class="stat-value high">${stats.high_count}</span>
                     </div>` : ''}
                     ${stats.medium_count ? `<div class="stat-item">
-                        <span class="stat-label">중간</span>
+                        <span class="stat-label">${labels.medium}</span>
                         <span class="stat-value medium">${stats.medium_count}</span>
                     </div>` : ''}
                     ${stats.low_count ? `<div class="stat-item">
-                        <span class="stat-label">낮음</span>
+                        <span class="stat-label">${labels.low}</span>
                         <span class="stat-value low">${stats.low_count}</span>
+                    </div>` : ''}
+                    ${stats.info_count ? `<div class="stat-item">
+                        <span class="stat-label">${labels.info}</span>
+                        <span class="stat-value info">${stats.info_count}</span>
                     </div>` : ''}
                 </div>
             </div>

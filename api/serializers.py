@@ -486,11 +486,36 @@ class ScannerDetailSerializer(serializers.Serializer):
         return []
 
     def get_details(self, obj):
-        """세부 검사 항목 목록 (각 항목별 pass/fail/warning 상태)"""
+        """세부 검사 항목 목록 (각 항목별 소속 레벨 포함)"""
         field_name = self.context.get('field_name')
         field_value = getattr(obj, field_name, {})
+
+        # 한국어 레벨 라벨 매핑
+        level_labels = {
+            'critical': '긴급',
+            'high': '위험',
+            'medium': '주의',
+            'low': '유의',
+            'info': '정보'
+        }
+
         if isinstance(field_value, dict):
-            return field_value.get('details', [])
+            details = field_value.get('details', [])
+            enhanced_details = []
+
+            for detail in details:
+                enhanced_detail = dict(detail)
+                # 소속 레벨 결정
+                if detail.get('status') == 'pass':
+                    enhanced_detail['level'] = 'passed'
+                    enhanced_detail['level_label'] = '통과'
+                else:
+                    severity = detail.get('severity', 'info')
+                    enhanced_detail['level'] = severity
+                    enhanced_detail['level_label'] = level_labels.get(severity, '정보')
+                enhanced_details.append(enhanced_detail)
+
+            return enhanced_details
         return []
 
     def get_metadata(self, obj):
@@ -525,12 +550,25 @@ class ScannerDetailSerializer(serializers.Serializer):
             }
 
     def get_statistics(self, obj):
-        """통계 정보"""
+        """통계 정보 - checked/passed 필드 활용 및 한국어 라벨"""
         field_name = self.context.get('field_name')
         field_value = getattr(obj, field_name, {})
 
+        # 한국어 라벨 매핑
+        severity_labels = {
+            'critical': '긴급',
+            'high': '위험',
+            'medium': '주의',
+            'low': '유의',
+            'info': '정보'
+        }
+
         if isinstance(field_value, dict):
             vulnerabilities = field_value.get('vulnerabilities', []) or field_value.get('issues', [])
+
+            # BaseScanner에서 제공하는 checked/passed 필드 활용
+            checked = field_value.get('checked', 0)
+            passed = field_value.get('passed', 0)
 
             # 심각도별 개수 계산
             severity_counts = {}
@@ -539,21 +577,27 @@ class ScannerDetailSerializer(serializers.Serializer):
                 severity_counts[severity] = severity_counts.get(severity, 0) + 1
 
             return {
+                'total_checked': checked,
+                'passed_count': passed,
                 'total_vulnerabilities': len(vulnerabilities),
                 'critical_count': severity_counts.get('critical', 0),
                 'high_count': severity_counts.get('high', 0),
                 'medium_count': severity_counts.get('medium', 0),
                 'low_count': severity_counts.get('low', 0),
                 'info_count': severity_counts.get('info', 0),
+                'labels': severity_labels,
                 'passed': len(vulnerabilities) == 0
             }
 
         return {
+            'total_checked': 0,
+            'passed_count': 0,
             'total_vulnerabilities': 0,
             'critical_count': 0,
             'high_count': 0,
             'medium_count': 0,
             'low_count': 0,
             'info_count': 0,
+            'labels': severity_labels,
             'passed': True
         }

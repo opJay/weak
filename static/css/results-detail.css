@@ -493,3 +493,67 @@
         font-size: 0.8rem;
     }
 }
+
+/* ===================================
+   통계 - 통과/정보 스타일
+   =================================== */
+
+.stat-value.passed {
+    color: #22c55e;
+}
+
+.stat-item.total .stat-value {
+    color: #3b82f6;
+}
+
+.stat-value.info {
+    color: #6b7280;
+}
+
+/* ===================================
+   세부 항목 - 레벨 배지 스타일
+   =================================== */
+
+.detail-card-badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.level-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.level-badge.passed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.level-badge.critical {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.level-badge.high {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.level-badge.medium {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.level-badge.low {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+
+.level-badge.info {
+    background: #f3f4f6;
+    color: #6b7280;
+}

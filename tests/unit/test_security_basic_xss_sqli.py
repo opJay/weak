@@ -147,7 +147,7 @@ class TestXSSScanner:
         result = scanner.scan()
 
         # Then
-        weak_csp = [v for v in result['vulnerabilities'] if 'Weak CSP' in v['type']]
+        weak_csp = [v for v in result['vulnerabilities'] if 'CSP Bypass Risk' in v['type']]
         assert len(weak_csp) > 0
         assert 'unsafe-inline' in weak_csp[0]['description']
 

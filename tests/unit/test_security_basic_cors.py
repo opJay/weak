@@ -111,8 +111,8 @@ class TestCORSScanner:
         # Then
         dangerous_issues = [i for i in result['issues'] if 'Dangerous Methods' in i['type']]
         assert len(dangerous_issues) > 0
-        assert 'PUT' in dangerous_issues[0]['methods']
-        assert 'DELETE' in dangerous_issues[0]['methods']
+        assert 'PUT' in dangerous_issues[0]['description']
+        assert 'DELETE' in dangerous_issues[0]['description']
 
 
 class TestCookieScanner:
@@ -138,7 +138,7 @@ class TestCookieScanner:
 
         # Then
         assert len(result['issues']) > 0
-        assert 'Secure 플래그가 없습니다' in result['issues'][0]['issues']
+        assert 'Secure 없음' in result['issues'][0]['issues']
 
     @pytest.mark.unit
     def test_detect_missing_httponly_flag(self):
