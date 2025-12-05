@@ -505,10 +505,10 @@ class ScannerDetailSerializer(serializers.Serializer):
 
             for detail in details:
                 enhanced_detail = dict(detail)
-                # 소속 레벨 결정
+                # 소속 레벨 결정 (통과 항목은 레벨 배지 미표시)
                 if detail.get('status') == 'pass':
                     enhanced_detail['level'] = 'passed'
-                    enhanced_detail['level_label'] = '통과'
+                    enhanced_detail['level_label'] = ''  # 상태 배지만 표시
                 else:
                     severity = detail.get('severity', 'info')
                     enhanced_detail['level'] = severity
@@ -566,9 +566,13 @@ class ScannerDetailSerializer(serializers.Serializer):
         if isinstance(field_value, dict):
             vulnerabilities = field_value.get('vulnerabilities', []) or field_value.get('issues', [])
 
-            # BaseScanner에서 제공하는 checked/passed 필드 활용
+            # BaseScanner에서 제공하는 checked 필드 활용
             checked = field_value.get('checked', 0)
-            passed = field_value.get('passed', 0)
+
+            # details에서 실제로 status='pass'인 항목만 통과로 계산
+            details = field_value.get('details', [])
+            actual_passed = sum(1 for d in details if d.get('status') == 'pass')
+            passed = actual_passed if details else field_value.get('passed', 0)
 
             # 심각도별 개수 계산
             severity_counts = {}
